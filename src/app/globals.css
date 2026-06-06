@@ -1,26 +1,122 @@
 @import "tailwindcss";
 
+/* ==============================
+   CSS Variables — Light & Dark
+   ============================== */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background:        #ffffff;
+  --foreground:        #0f1117;
+  --primary:           #16a34a;
+  --primary-foreground:#ffffff;
+  --muted:             #f1f5f1;
+  --muted-foreground:  #64748b;
+  --card:              #ffffff;
+  --card-foreground:   #0f1117;
+  --border:            #e2e8f0;
+  --accent-soft:       #dcfce7;
+}
+.dark {
+  --background:        #0a0f0d;
+  --foreground:        #e8eeff;
+  --primary:           #22c55e;
+  --primary-foreground:#000000;
+  --muted:             rgba(255,255,255,0.06);
+  --muted-foreground:  #8a95b8;
+  --card:              rgba(10,16,12,0.85);
+  --card-foreground:   #e8eeff;
+  --border:            rgba(255,255,255,0.09);
+  --accent-soft:       rgba(34,197,94,0.12);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background:        var(--background);
+  --color-foreground:        var(--foreground);
+  --color-primary:           var(--primary);
+  --color-primary-foreground:var(--primary-foreground);
+  --color-muted:             var(--muted);
+  --color-muted-foreground:  var(--muted-foreground);
+  --color-card:              var(--card);
+  --color-card-foreground:   var(--card-foreground);
+  --color-border:            var(--border);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* ==============================
+   Base
+   ============================== */
+html { color-scheme: light; }
+html.dark { color-scheme: dark; }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), "SF Pro Display", "PingFang SC", sans-serif;
+  transition: background 0.25s, color 0.25s;
 }
+
+/* ==============================
+   Keyframe Animations
+   ============================== */
+@keyframes meteor {
+  0%   { transform: rotate(var(--angle,215deg)) translateX(0);      opacity: 1; }
+  70%  { opacity: 1; }
+  100% { transform: rotate(var(--angle,215deg)) translateX(-800px);  opacity: 0; }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ==============================
+   Meteor shower
+   ============================== */
+.meteor-span {
+  position: absolute;
+  width: 2px; height: 2px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.75);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.08);
+  animation: meteor var(--dur,6s) linear var(--delay,0s) infinite;
+}
+.meteor-tail {
+  position: absolute;
+  top: 50%; left: 0;
+  width: 60px; height: 1px;
+  transform: translateY(-50%);
+  background: linear-gradient(to left, transparent, rgba(255,255,255,0.5));
+}
+
+/* ==============================
+   Diagonal Decoration
+   ============================== */
+.deco-slash {
+  position: absolute;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--border);
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+  opacity: 0.8;
+}
+
+/* ==============================
+   Fade-up entrance
+   ============================== */
+.fade-up-1 { animation: fade-up 0.55s ease both; }
+.fade-up-2 { animation: fade-up 0.55s ease 0.08s both; }
+.fade-up-3 { animation: fade-up 0.55s ease 0.16s both; }
+.fade-up-4 { animation: fade-up 0.55s ease 0.28s both; }
+.fade-up-5 { animation: fade-up 0.55s ease 0.38s both; }
+
+/* ==============================
+   Scroll
+   ============================== */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }

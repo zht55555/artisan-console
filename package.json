@@ -1,27 +1,38 @@
 {
-  "name": "aigc-mvp",
+  "name": "artisan",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
+    "dev": "next dev",
+    "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf .next",
+    "db:generate": "dotenv -e .env.local -- drizzle-kit generate",
+    "db:push": "dotenv -e .env.local -- drizzle-kit push"
   },
   "dependencies": {
+    "drizzle-orm": "^0.45.2",
+    "lucide-react": "^1.17.0",
+    "next": "15.5.19",
+    "openai": "^6.42.0",
+    "postgres": "^3.4.9",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "next": "15.5.19"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
-    "typescript": "^5",
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4",
+    "dotenv-cli": "^11.0.0",
+    "drizzle-kit": "^0.31.10",
     "eslint": "^9",
     "eslint-config-next": "15.5.19",
-    "@eslint/eslintrc": "^3"
+    "tailwindcss": "^4",
+    "typescript": "^5"
   }
 }
