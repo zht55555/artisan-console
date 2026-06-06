@@ -16,6 +16,7 @@ import {
   Sparkles,
   Play,
 } from "lucide-react";
+import { motion } from "framer-motion";
 
 /* ────────────────────────────────────────
    Types
@@ -972,7 +973,10 @@ export default function ChatPage() {
                       />
                     </div>
                   )}
-                  <div
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.2 }}
                     className={`max-w-[78%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap
                     ${
                       msg.role === "user"
@@ -1025,7 +1029,7 @@ export default function ChatPage() {
                         已中断
                       </span>
                     )}
-                  </div>
+                  </motion.div>
                 </div>
               ))}
               {error && !busy && messages.length > 0 && (
