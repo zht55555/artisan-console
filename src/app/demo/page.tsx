@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Play, MessageSquare, Image as ImageIcon, Wand2 } from "lucide-react";
+import { fetchWithRetry } from "@/lib/retry";
 
 type StepResult = {
   title: string;
@@ -13,7 +14,11 @@ export default function DemoPage() {
   const [results, setResults] = useState<StepResult[]>([]);
 
   useEffect(() => {
-    void fetch("/api/auth/visitor", { method: "POST" }).catch(() => null);
+    void fetchWithRetry(
+      "/api/auth/visitor",
+      { method: "POST" },
+      { retries: 3, retryUnsafeMethods: true },
+    ).catch(() => null);
   }, []);
 
   const runDemo = async () => {
@@ -23,27 +28,39 @@ export default function DemoPage() {
     const next: StepResult[] = [];
 
     try {
-      await fetch("/api/auth/visitor", { method: "POST" }).catch(() => null);
+      await fetchWithRetry(
+        "/api/auth/visitor",
+        { method: "POST" },
+        { retries: 3, retryUnsafeMethods: true },
+      ).catch(() => null);
 
       // 1) Chat quick demo: create conversation + stream one message
-      const convRes = await fetch("/api/v1/conversations", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ title: "Demo 会话" }),
-      });
+      const convRes = await fetchWithRetry(
+        "/api/v1/conversations",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ title: "Demo 会话" }),
+        },
+        { retries: 3, retryUnsafeMethods: true },
+      );
       const convJson = await convRes.json();
       if (!convRes.ok || !convJson.conversationId) {
         throw new Error("创建 demo 会话失败");
       }
 
-      const streamRes = await fetch("/api/v1/chat/stream", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          conversationId: convJson.conversationId,
-          content: "请用一句话介绍这个 Artisan MVP 的价值。",
-        }),
-      });
+      const streamRes = await fetchWithRetry(
+        "/api/v1/chat/stream",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            conversationId: convJson.conversationId,
+            content: "请用一句话介绍这个 Artisan MVP 的价值。",
+          }),
+        },
+        { retries: 3, retryUnsafeMethods: true },
+      );
       if (!streamRes.ok) throw new Error("对话流式调用失败");
       next.push({
         title: "对话流式演示",
@@ -51,15 +68,19 @@ export default function DemoPage() {
       });
 
       // 2) Prompt template demo
-      const promptRes = await fetch("/api/v1/prompt-templates", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          name: "Demo 模板",
-          template: "为{{brand}}生成一段{{tone}}风格的品牌介绍。",
-          description: "演示模板",
-        }),
-      });
+      const promptRes = await fetchWithRetry(
+        "/api/v1/prompt-templates",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            name: "Demo 模板",
+            template: "为{{brand}}生成一段{{tone}}风格的品牌介绍。",
+            description: "演示模板",
+          }),
+        },
+        { retries: 3, retryUnsafeMethods: true },
+      );
       const promptJson = await promptRes.json();
       if (!promptRes.ok || !promptJson.templateId) {
         throw new Error("模板创建失败");
@@ -70,15 +91,19 @@ export default function DemoPage() {
       });
 
       // 3) Image generation demo (Bailian)
-      const genRes = await fetch("/api/v1/generations", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          type: "text_to_image",
-          prompt: "一张现代科技风格的办公场景插画，明亮配色，4k",
-          size: "1024x1024",
-        }),
-      });
+      const genRes = await fetchWithRetry(
+        "/api/v1/generations",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            type: "text_to_image",
+            prompt: "一张现代科技风格的办公场景插画，明亮配色，4k",
+            size: "1024x1024",
+          }),
+        },
+        { retries: 3, retryUnsafeMethods: true },
+      );
       const genJson = await genRes.json();
       if (!genRes.ok || !genJson.taskId) {
         throw new Error("文生图任务创建失败");

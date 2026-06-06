@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { fetchWithRetry } from "@/lib/retry";
 
 type TaskDetail = {
   ok: boolean;
@@ -23,7 +24,7 @@ export default function ImageNewPage() {
 
   const pollTask = async (id: string) => {
     for (let i = 0; i < 25; i++) {
-      const r = await fetch(`/api/v1/generations/${id}`);
+      const r = await fetchWithRetry(`/api/v1/generations/${id}`);
       const d = (await r.json()) as TaskDetail;
       if (!r.ok) throw new Error(d.error || "查询任务失败");
 
@@ -50,16 +51,20 @@ export default function ImageNewPage() {
     setStatus("");
 
     try {
-      const r = await fetch("/api/v1/generations", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          type: "text_to_image",
-          prompt,
-          size,
-          style,
-        }),
-      });
+      const r = await fetchWithRetry(
+        "/api/v1/generations",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            type: "text_to_image",
+            prompt,
+            size,
+            style,
+          }),
+        },
+        { retries: 3, retryUnsafeMethods: true },
+      );
       const d = await r.json();
       if (!r.ok) throw new Error(d?.error || "提交失败");
 

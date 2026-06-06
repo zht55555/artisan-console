@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { fetchWithRetry } from "@/lib/retry";
 
 type TaskPayload = {
   ok: boolean;
@@ -26,7 +27,7 @@ export default function ImageTaskPage() {
     if (!taskId) return;
     const run = async () => {
       try {
-        const r = await fetch(`/api/v1/generations/${taskId}`);
+        const r = await fetchWithRetry(`/api/v1/generations/${taskId}`);
         const d = (await r.json()) as TaskPayload;
         if (!r.ok) throw new Error(d.error || "加载失败");
         setData(d);

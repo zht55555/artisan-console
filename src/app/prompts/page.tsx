@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { fetchWithRetry } from "@/lib/retry";
 
 type PromptTemplate = {
   id: string;
@@ -48,13 +49,17 @@ export default function PromptTemplatesPage() {
   );
 
   async function requestJson(url: string, init?: RequestInit) {
-    const response = await fetch(url, {
-      ...init,
-      headers: {
-        "content-type": "application/json",
-        ...(init?.headers ?? {}),
+    const response = await fetchWithRetry(
+      url,
+      {
+        ...init,
+        headers: {
+          "content-type": "application/json",
+          ...(init?.headers ?? {}),
+        },
       },
-    });
+      { retries: 3, retryUnsafeMethods: true },
+    );
 
     const data = await response
       .json()

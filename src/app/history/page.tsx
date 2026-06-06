@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { fetchWithRetry } from "@/lib/retry";
 
 type HistoryItem = {
   type: "chat" | "image" | "edit";
@@ -34,7 +35,7 @@ export default function HistoryPage() {
       setLoading(true);
       setError("");
       try {
-        const r = await fetch(`/api/v1/history?type=${filter}`);
+        const r = await fetchWithRetry(`/api/v1/history?type=${filter}`);
         const d = await r.json();
         if (!r.ok) throw new Error(d?.error || "加载失败");
         setItems(d.items || []);

@@ -1,3 +1,5 @@
+import { fetchWithRetry } from "@/lib/retry";
+
 type GenerateImageInput = {
   prompt: string;
   negativePrompt?: string;
@@ -72,7 +74,7 @@ async function pollTaskUntilDone(
   const maxAttempts = 20;
 
   for (let i = 0; i < maxAttempts; i++) {
-    const r = await fetch(`${baseUrl}/api/v1/tasks/${taskId}`, {
+    const r = await fetchWithRetry(`${baseUrl}/api/v1/tasks/${taskId}`, {
       method: "GET",
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -120,7 +122,7 @@ export async function generateImageWithBailian(
     },
   };
 
-  const res = await fetch(
+  const res = await fetchWithRetry(
     `${baseUrl}/api/v1/services/aigc/text2image/image-synthesis`,
     {
       method: "POST",
@@ -131,6 +133,7 @@ export async function generateImageWithBailian(
       },
       body: JSON.stringify(body),
     },
+    { retries: 3, retryUnsafeMethods: true },
   );
 
   const payload = (await res.json().catch(() => ({}))) as DashscopePayload;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { fetchWithRetry } from "@/lib/retry";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,13 +25,13 @@ async function requestJson(
   url: string,
   init?: RequestInit,
 ): Promise<JsonValue> {
-  const response = await fetch(url, {
+  const response = await fetchWithRetry(url, {
     ...init,
     headers: {
       "content-type": "application/json",
       ...(init?.headers ?? {}),
     },
-  });
+  }, { retries: 3, retryUnsafeMethods: true });
 
   const data = await response
     .json()

@@ -17,6 +17,7 @@ import {
   Play,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { fetchWithRetry } from "@/lib/retry";
 
 /* ────────────────────────────────────────
    Types
@@ -192,18 +193,26 @@ function uid() {
 }
 /** 初始化 visitor session（middleware 会设 cookie，首次需手动触发） */
 async function initVisitorSession(): Promise<void> {
-  await fetch("/api/auth/visitor", { method: "POST" }).catch(() => null);
+  await fetchWithRetry(
+    "/api/auth/visitor",
+    { method: "POST" },
+    { retries: 3, retryUnsafeMethods: true },
+  ).catch(() => null);
 }
 
 async function ensureConvId(current: string): Promise<string> {
   if (current) return current;
 
   const doCreate = async () =>
-    fetch("/api/v1/conversations", {
+    fetchWithRetry(
+      "/api/v1/conversations",
+      {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ title: "新会话" }),
-    });
+      },
+      { retries: 3, retryUnsafeMethods: true },
+    );
 
   let r = await doCreate();
 
@@ -337,12 +346,15 @@ export default function ChatPage() {
       };
       if (imgBase64) body.image = imgBase64;
 
-      const res = await fetch("/api/v1/chat/stream", {
+      const res = await fetchWithRetry(
+        "/api/v1/chat/stream",
+        {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(body),
         signal: ctrl.signal,
-      });
+        },
+      );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       // ── Consume named SSE events via async generator ──
@@ -443,7 +455,7 @@ export default function ChatPage() {
   const pollImageTask = useCallback(
     async (taskId: string) => {
       for (let i = 0; i < 25; i++) {
-        const res = await fetch(`/api/v1/generations/${taskId}`);
+        const res = await fetchWithRetry(`/api/v1/generations/${taskId}`);
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
           throw new Error(data?.error || "查询图片任务失败");
@@ -505,7 +517,9 @@ export default function ChatPage() {
     try {
       await initVisitorSession();
 
-      let res = await fetch("/api/v1/generations", {
+      let res = await fetchWithRetry(
+        "/api/v1/generations",
+        {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -514,12 +528,16 @@ export default function ChatPage() {
           size: imageSize,
           style: imageStyle,
         }),
-      });
+        },
+        { retries: 3, retryUnsafeMethods: true },
+      );
 
       let data = await res.json().catch(() => ({}));
       if (res.status === 401) {
         await initVisitorSession();
-        res = await fetch("/api/v1/generations", {
+        res = await fetchWithRetry(
+          "/api/v1/generations",
+          {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
@@ -528,7 +546,9 @@ export default function ChatPage() {
             size: imageSize,
             style: imageStyle,
           }),
-        });
+          },
+          { retries: 3, retryUnsafeMethods: true },
+        );
         data = await res.json().catch(() => ({}));
       }
 

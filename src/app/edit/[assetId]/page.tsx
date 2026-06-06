@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useParams } from "next/navigation";
+import { fetchWithRetry } from "@/lib/retry";
 
 type TaskDetail = {
   ok: boolean;
@@ -36,14 +37,18 @@ export default function EditPage() {
     setResultUrl("");
 
     try {
-      const r = await fetch("/api/v1/edits", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          sourceAssetId: assetId,
-          prompt,
-        }),
-      });
+      const r = await fetchWithRetry(
+        "/api/v1/edits",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            sourceAssetId: assetId,
+            prompt,
+          }),
+        },
+        { retries: 3, retryUnsafeMethods: true },
+      );
       const d = await r.json();
       if (!r.ok) throw new Error(d?.error || "创建编辑任务失败");
       setTaskId(d.taskId);
@@ -58,7 +63,7 @@ export default function EditPage() {
 
   const pollTask = async (id: string) => {
     for (let i = 0; i < 25; i++) {
-      const r = await fetch(`/api/v1/generations/${id}`);
+      const r = await fetchWithRetry(`/api/v1/generations/${id}`);
       const d = (await r.json()) as TaskDetail;
       if (!r.ok) throw new Error(d.error || "查询编辑任务失败");
 
