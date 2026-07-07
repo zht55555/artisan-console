@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { fetchWithRetry } from "@/lib/retry";
+import { useTranslations } from "next-intl";
 
 type PromptTemplate = {
   id: string;
@@ -21,6 +22,7 @@ type JsonValue =
   | null;
 
 export default function PromptTemplatesPage() {
+  const t = useTranslations("prompts");
   const [templates, setTemplates] = useState<PromptTemplate[]>([]);
   const [name, setName] = useState("电商产品图模板");
   const [description, setDescription] = useState("用于快速生成主图场景描述");
@@ -108,14 +110,12 @@ export default function PromptTemplatesPage() {
       <div className="vf-grid min-h-screen">
         <div className="mx-auto grid w-full max-w-6xl gap-5 p-6 md:grid-cols-[1.2fr_0.8fr] md:p-10">
           <section className="vf-card space-y-4 rounded-2xl p-5">
-            <p className="vf-muted text-xs">Batch 5</p>
-            <h1 className="text-2xl font-semibold">Prompt 模板工作台</h1>
-            <p className="vf-muted text-sm">
-              支持模板 CRUD、变量提取与一键套用。
-            </p>
+            <p className="vf-muted text-xs">{t("batchLabel")}</p>
+            <h1 className="text-2xl font-semibold">{t("title")}</h1>
+            <p className="vf-muted text-sm">{t("subtitle")}</p>
 
             <div className="space-y-2">
-              <label className="text-sm">模板名</label>
+              <label className="text-sm">{t("fieldName")}</label>
               <input
                 value={name}
                 onChange={(event) => setName(event.target.value)}
@@ -124,7 +124,7 @@ export default function PromptTemplatesPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm">描述</label>
+              <label className="text-sm">{t("fieldDesc")}</label>
               <input
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
@@ -133,9 +133,7 @@ export default function PromptTemplatesPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm">
-                模板正文（变量格式: {"{{name}}"}）
-              </label>
+              <label className="text-sm">{t("fieldTemplate", { varFormat: "{{name}}" })}</label>
               <textarea
                 value={template}
                 onChange={(event) => setTemplate(event.target.value)}
@@ -157,7 +155,7 @@ export default function PromptTemplatesPage() {
                 }
                 className="vf-btn-primary rounded-xl px-4 py-2 text-sm font-medium disabled:opacity-50"
               >
-                新建模板
+                {t("create")}
               </button>
 
               <button
@@ -173,7 +171,7 @@ export default function PromptTemplatesPage() {
                 }
                 className="rounded-xl border border-white/20 bg-white/5 px-4 py-2 text-sm font-medium disabled:opacity-50"
               >
-                更新所选
+                {t("update")}
               </button>
 
               <button
@@ -188,12 +186,12 @@ export default function PromptTemplatesPage() {
                 }
                 className="rounded-xl border border-red-300/30 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-200 disabled:opacity-50"
               >
-                删除所选
+                {t("remove")}
               </button>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm">变量 JSON</label>
+              <label className="text-sm">{t("fieldValues")}</label>
               <textarea
                 value={valuesJson}
                 onChange={(event) => setValuesJson(event.target.value)}
@@ -230,16 +228,18 @@ export default function PromptTemplatesPage() {
               }
               className="vf-btn-primary rounded-xl px-4 py-2 text-sm font-medium disabled:opacity-50"
             >
-              套用模板并预览 Prompt
+              {t("apply")}
             </button>
           </section>
 
           <section className="space-y-5">
             <article className="vf-card rounded-2xl p-4">
-              <h2 className="mb-3 text-sm font-medium">模板列表</h2>
+              <h2 className="mb-3 text-sm font-medium">
+                {t("listTitle")}
+              </h2>
               <div className="max-h-[320px] space-y-2 overflow-auto pr-1">
                 {templates.length === 0 ? (
-                  <p className="vf-muted text-sm">暂无模板，先创建一个。</p>
+                  <p className="vf-muted text-sm">{t("listEmpty")}</p>
                 ) : null}
 
                 {templates.map((item) => (
@@ -271,18 +271,23 @@ export default function PromptTemplatesPage() {
             </article>
 
             <article className="vf-card rounded-2xl p-4">
-              <h2 className="mb-2 text-sm font-medium">当前选中</h2>
+              <h2 className="mb-2 text-sm font-medium">
+                {t("selectedTitle")}
+              </h2>
               <p className="vf-muted text-xs">
-                {selectedTemplate?.id || "未选择"}
+                {selectedTemplate?.id || t("selectedNone")}
               </p>
               <p className="mt-2 text-sm">{selectedTemplate?.name || "-"}</p>
               <p className="vf-muted mt-1 text-xs">
-                {(selectedTemplate?.variables || []).join(", ") || "无变量"}
+                {(selectedTemplate?.variables || []).join(", ") ||
+                  t("noVars")}
               </p>
             </article>
 
             <article className="vf-card rounded-2xl p-4">
-              <h2 className="mb-2 text-sm font-medium">接口输出</h2>
+              <h2 className="mb-2 text-sm font-medium">
+                {t("outputTitle")}
+              </h2>
               <pre className="max-h-[320px] overflow-auto rounded-xl border border-white/10 bg-black/60 p-3 text-xs text-zinc-100">
                 {JSON.stringify(output, null, 2)}
               </pre>

@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { fetchWithRetry } from "@/lib/retry";
+import { useTranslations } from "next-intl";
+import { LocaleSwitcher } from "@/components/locale-switcher";
 
 /* ────────────────────────────────────────
    Types
@@ -36,30 +38,8 @@ type FollowUpAction = "optimize" | "marketing" | "variants";
 /* ────────────────────────────────────────
    Constants
    ──────────────────────────────────────── */
-const MODELS = [
-  { id: "qwen-turbo", label: "Qwen Turbo", badge: "快速" },
-  { id: "qwen-plus", label: "Qwen Plus", badge: "平衡" },
-  { id: "qwen-max", label: "Qwen Max", badge: "强力" },
-];
-
-const SUGGESTIONS = [
-  "帮我写一首关于深夜的诗",
-  "解释一下量子纠缠",
-  "设计一个现代登录页面",
-  "优化这段 React 代码",
-];
-
-const FEATURES = [
-  { icon: Zap, label: "闪电般快速", color: "text-yellow-500" },
-  { icon: Play, label: "简单易用", color: "text-primary" },
-  { icon: Sparkles, label: "AI 驱动", color: "text-primary" },
-];
-
-const FOLLOW_UP_ACTIONS: Array<{ key: FollowUpAction; label: string }> = [
-  { key: "optimize", label: "细节增强" },
-  { key: "marketing", label: "商用文案" },
-  { key: "variants", label: "再出 3 版" },
-];
+const FEATURE_ICONS = [Zap, Play, Sparkles];
+const FEATURE_COLORS = ["text-yellow-500", "text-primary", "text-primary"];
 
 /* ────────────────────────────────────────
    Meteors (VideoFly pattern)
@@ -200,16 +180,20 @@ async function initVisitorSession(): Promise<void> {
   ).catch(() => null);
 }
 
-async function ensureConvId(current: string): Promise<string> {
+async function ensureConvId(
+  current: string,
+  createFailedMsg: string,
+  sessionTitle = "New Session",
+): Promise<string> {
   if (current) return current;
 
   const doCreate = async () =>
     fetchWithRetry(
       "/api/v1/conversations",
       {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ title: "新会话" }),
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ title: sessionTitle }),
       },
       { retries: 3, retryUnsafeMethods: true },
     );
@@ -223,7 +207,7 @@ async function ensureConvId(current: string): Promise<string> {
   }
 
   const d = await r.json();
-  if (!r.ok || !d.conversationId) throw new Error("创建会话失败");
+  if (!r.ok || !d.conversationId) throw new Error(createFailedMsg);
   return String(d.conversationId);
 }
 
@@ -232,6 +216,26 @@ async function ensureConvId(current: string): Promise<string> {
    ════════════════════════════════════════ */
 export default function ChatPage() {
   const { dark, toggle } = useTheme();
+  const tNav = useTranslations("nav");
+  const tChat = useTranslations("chat");
+
+  const MODELS = [
+    { id: "qwen-turbo", label: "Qwen Turbo", badge: tChat("modelBadgeTurbo") },
+    { id: "qwen-plus", label: "Qwen Plus", badge: tChat("modelBadgePlus") },
+    { id: "qwen-max", label: "Qwen Max", badge: tChat("modelBadgeMax") },
+  ];
+  const SUGGESTIONS = tChat.raw("suggestions") as string[];
+  const featureLabels = tChat.raw("featureLabels") as string[];
+  const FEATURES = featureLabels.map((label, i) => ({
+    icon: FEATURE_ICONS[i],
+    label,
+    color: FEATURE_COLORS[i],
+  }));
+  const FOLLOW_UP_ACTIONS: Array<{ key: FollowUpAction; label: string }> = [
+    { key: "optimize", label: tChat("followUpOptimize") },
+    { key: "marketing", label: tChat("followUpMarketing") },
+    { key: "variants", label: tChat("followUpVariants") },
+  ];
 
   /* pre-warm visitor session on mount */
   useEffect(() => {
@@ -333,7 +337,7 @@ export default function ChatPage() {
     setStreamState("sending");
 
     try {
-      const cid = await ensureConvId(convId);
+      const cid = await ensureConvId(convId, tChat("createSessionFailed"), tChat("newSession"));
       setConvId(cid);
       const ctrl = new AbortController();
       abortRef.current = ctrl;
@@ -346,15 +350,12 @@ export default function ChatPage() {
       };
       if (imgBase64) body.image = imgBase64;
 
-      const res = await fetchWithRetry(
-        "/api/v1/chat/stream",
-        {
+      const res = await fetchWithRetry("/api/v1/chat/stream", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(body),
         signal: ctrl.signal,
-        },
-      );
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       // ── Consume named SSE events via async generator ──
@@ -387,12 +388,16 @@ export default function ChatPage() {
           ),
         );
       } else {
-        const msg = err instanceof Error ? err.message : "未知错误";
+        const msg = err instanceof Error ? err.message : tChat("errors.unknown");
         setError(msg);
         setMessages((prev) =>
           prev.map((m) =>
             m.id === asstMsg.id
-              ? { ...m, content: `请求失败: ${msg}`, status: "error" }
+              ? {
+                  ...m,
+                  content: tChat("errors.requestFailed", { msg }),
+                  status: "error",
+                }
               : m,
           ),
         );
@@ -422,10 +427,10 @@ export default function ChatPage() {
 
       const nextInput =
         action === "optimize"
-          ? `请基于${imageContext}给出 3 个可执行的细节增强方案，并说明分别适合的使用场景。`
+          ? tChat("message.optimizePrompt", { ctx: imageContext })
           : action === "marketing"
-            ? `请基于${imageContext}生成 3 条不同风格的商用宣传文案（专业版、年轻版、极简版）。`
-            : `请基于${imageContext}设计 3 个视觉变体方向，分别说明关键词、色彩和构图建议。`;
+            ? tChat("message.marketingPrompt", { ctx: imageContext })
+            : tChat("message.variantsPrompt", { ctx: imageContext });
 
       setComposerMode("chat");
       setInput(nextInput);
@@ -458,7 +463,7 @@ export default function ChatPage() {
         const res = await fetchWithRetry(`/api/v1/generations/${taskId}`);
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-          throw new Error(data?.error || "查询图片任务失败");
+          throw new Error(data?.error || tChat("errors.queryTaskFailed"));
         }
 
         const taskStatus = String(data?.task?.status || "");
@@ -477,7 +482,9 @@ export default function ChatPage() {
               {
                 id: uid(),
                 role: "assistant",
-                content: `已为你生成图片${imagePrompt.trim() ? `：${imagePrompt.trim()}` : ""}`,
+                content: imagePrompt.trim()
+                    ? tChat("message.generatedImage", { prompt: imagePrompt.trim() })
+                    : tChat("message.generatedImageEmpty"),
                 image: firstAsset,
                 imageAssetId:
                   typeof firstAssetId === "string" && firstAssetId.length > 0
@@ -492,13 +499,13 @@ export default function ChatPage() {
         }
 
         if (taskStatus === "failed" || taskStatus === "canceled") {
-          throw new Error(`任务已结束：${taskStatus}`);
+          throw new Error(tChat("errors.taskEnded", { status: taskStatus }));
         }
 
         await new Promise((resolve) => setTimeout(resolve, 1200));
       }
 
-      throw new Error("图片任务轮询超时");
+      throw new Error(tChat("errors.pollTimeout"));
     },
     [imagePrompt],
   );
@@ -520,14 +527,14 @@ export default function ChatPage() {
       let res = await fetchWithRetry(
         "/api/v1/generations",
         {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          type: "text_to_image",
-          prompt,
-          size: imageSize,
-          style: imageStyle,
-        }),
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            type: "text_to_image",
+            prompt,
+            size: imageSize,
+            style: imageStyle,
+          }),
         },
         { retries: 3, retryUnsafeMethods: true },
       );
@@ -538,14 +545,14 @@ export default function ChatPage() {
         res = await fetchWithRetry(
           "/api/v1/generations",
           {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            type: "text_to_image",
-            prompt,
-            size: imageSize,
-            style: imageStyle,
-          }),
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              type: "text_to_image",
+              prompt,
+              size: imageSize,
+              style: imageStyle,
+            }),
           },
           { retries: 3, retryUnsafeMethods: true },
         );
@@ -553,17 +560,17 @@ export default function ChatPage() {
       }
 
       if (!res.ok) {
-        throw new Error(data?.error || "创建图片任务失败");
+        throw new Error(data?.error || tChat("errors.createImageTaskFailed"));
       }
 
       const taskId = String(data?.taskId || "");
-      if (!taskId) throw new Error("图片任务缺少 taskId");
+      if (!taskId) throw new Error(tChat("errors.missingTaskId"));
 
       setImageTaskId(taskId);
       setImageStatus(String(data?.status || "queued"));
       await pollImageTask(taskId);
     } catch (err: unknown) {
-      setImageError(err instanceof Error ? err.message : "图片生成失败");
+      setImageError(err instanceof Error ? err.message : tChat("errors.unknown"));
     } finally {
       setImageLoading(false);
     }
@@ -590,17 +597,19 @@ export default function ChatPage() {
           onClick={() => setComposerMode("chat")}
           className={`rounded-full px-3 py-1.5 text-xs transition-colors ${composerMode === "chat" ? "bg-primary text-primary-foreground" : "border border-border text-muted-foreground hover:text-foreground"}`}
         >
-          对话
+          {tChat("composer.tabChat")}
         </button>
         <button
           onClick={() => setComposerMode("image")}
           className={`rounded-full px-3 py-1.5 text-xs transition-colors ${composerMode === "image" ? "bg-primary text-primary-foreground" : "border border-border text-muted-foreground hover:text-foreground"}`}
         >
-          文生图
+          {tChat("composer.tabImage")}
         </button>
         <div className="flex-1" />
         <div className="text-[11px] text-muted-foreground">
-          {composerMode === "chat" ? "SSE 流式返回" : "图片任务轮询返回"}
+          {composerMode === "chat"
+            ? tChat("composer.sseHint")
+            : tChat("composer.pollHint")}
         </div>
       </div>
 
@@ -638,7 +647,9 @@ export default function ChatPage() {
         }
         onKeyDown={handleKey}
         placeholder={
-          composerMode === "image" ? "输入图片描述…" : "输入你的想法…"
+          composerMode === "image"
+            ? tChat("composer.placeholderImage")
+            : tChat("composer.placeholderChat")
         }
         rows={2}
         disabled={busy || imageLoading}
@@ -680,7 +691,7 @@ export default function ChatPage() {
               disabled={busy}
               className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors disabled:opacity-40"
             >
-              <ImageIcon size={13} /> <span>图片</span>
+              <ImageIcon size={13} /> <span>{tChat("composer.uploadImage")}</span>
             </button>
 
             {/* model selector */}
@@ -725,14 +736,14 @@ export default function ChatPage() {
         ) : (
           <div className="flex items-center gap-2">
             <div className="text-xs text-muted-foreground">
-              文生图模式下直接生成，不需要模型切换
+              {tChat("composer.imageModHint")}
             </div>
             <button
               onClick={handleUseLastChatAsImagePrompt}
               disabled={!latestUserText || imageLoading}
               className="text-xs px-2.5 py-1 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors disabled:opacity-40"
             >
-              用上一轮对话出图
+              {tChat("composer.useLastChat")}
             </button>
           </div>
         )}
@@ -746,7 +757,7 @@ export default function ChatPage() {
               onClick={handleAbort}
               className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
             >
-              <Square size={13} fill="currentColor" /> 停止
+              <Square size={13} fill="currentColor" /> {tChat("composer.stop")}
             </button>
           ) : (
             <button
@@ -754,7 +765,7 @@ export default function ChatPage() {
               disabled={!input.trim() && !imgPreview}
               className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
             >
-              <Send size={13} /> 发送
+              <Send size={13} /> {tChat("composer.send")}
             </button>
           )
         ) : (
@@ -763,7 +774,10 @@ export default function ChatPage() {
             disabled={imageLoading || !imagePrompt.trim()}
             className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
           >
-            <ImageIcon size={13} /> {imageLoading ? "生成中" : "生成图片"}
+            <ImageIcon size={13} />{" "}
+            {imageLoading
+              ? tChat("composer.generating")
+              : tChat("composer.generateImage")}
           </button>
         )}
       </div>
@@ -800,7 +814,7 @@ export default function ChatPage() {
                       href={`/edit/${imageAssetId}?from=chat`}
                       className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors"
                     >
-                      进入编辑
+                      {tChat("composer.enterEdit")}
                     </Link>
                   )}
                   {renderFollowUpActions(imagePrompt)}
@@ -886,15 +900,18 @@ export default function ChatPage() {
               href="/chat"
               className="px-3 py-1.5 rounded-lg hover:text-foreground hover:bg-muted/60 transition-colors"
             >
-              对话
+              {tNav("chat")}
             </Link>
           </nav>
-          <button
-            onClick={toggle}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-          >
-            {dark ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
+          <div className="flex items-center gap-2">
+            <LocaleSwitcher className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors" />
+            <button
+              onClick={toggle}
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+            >
+              {dark ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -911,21 +928,22 @@ export default function ChatPage() {
                 <div className="fade-up-1 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
                   <Sparkles className="h-4 w-4 text-primary" />
                   <span className="text-sm font-medium text-primary">
-                    支持多模型 · 流式输出 · 图片上传
+                    {tChat("hero.badge")}
                   </span>
                 </div>
 
                 {/* Headline */}
                 <h1 className="fade-up-2 text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">
-                  将你的想法转化为
+                  {tChat("hero.titleLine1")}
                   <br />
-                  <span className="text-primary">精彩对话</span>
+                  <span className="text-primary">
+                    {tChat("hero.titleHighlight")}
+                  </span>
                 </h1>
 
                 {/* Sub */}
                 <p className="fade-up-3 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-                  在几秒内获得高质量 AI
-                  回答。支持文字、图片输入，多模型自由切换。
+                  {tChat("hero.subtitle")}
                 </p>
 
                 {/* Feature pills */}
@@ -1021,7 +1039,7 @@ export default function ChatPage() {
                                   href={`/edit/${msg.imageAssetId}?from=chat`}
                                   className="text-[11px] px-2.5 py-1 rounded-md border border-border/70 text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors"
                                 >
-                                  进入编辑
+                                  {tChat("composer.enterEdit")}
                                 </Link>
                               )}
                               {renderFollowUpActions(msg.content, true)}
@@ -1046,7 +1064,7 @@ export default function ChatPage() {
                       ))}
                     {msg.status === "canceled" && (
                       <span className="block text-xs opacity-40 mt-1">
-                        已中断
+                        {tChat("message.canceled")}
                       </span>
                     )}
                   </motion.div>
@@ -1058,7 +1076,7 @@ export default function ChatPage() {
                     onClick={handleRetry}
                     className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
                   >
-                    <RotateCcw size={12} /> 重新发送
+                    <RotateCcw size={12} /> {tChat("message.retry")}
                   </button>
                 </div>
               )}

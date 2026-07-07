@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { fetchWithRetry } from "@/lib/retry";
+import { useTranslations } from "next-intl";
 
 type TaskDetail = {
   ok: boolean;
@@ -11,6 +12,7 @@ type TaskDetail = {
 };
 
 export default function ImageNewPage() {
+  const t = useTranslations("imageNew");
   const [prompt, setPrompt] = useState(
     "一只赛博朋克风格的小猫，霓虹灯街景，细节丰富",
   );
@@ -26,7 +28,7 @@ export default function ImageNewPage() {
     for (let i = 0; i < 25; i++) {
       const r = await fetchWithRetry(`/api/v1/generations/${id}`);
       const d = (await r.json()) as TaskDetail;
-      if (!r.ok) throw new Error(d.error || "查询任务失败");
+      if (!r.ok) throw new Error(d.error || t("queryFailed"));
 
       const s = d.task?.status || "";
       setStatus(s);
@@ -66,13 +68,13 @@ export default function ImageNewPage() {
         { retries: 3, retryUnsafeMethods: true },
       );
       const d = await r.json();
-      if (!r.ok) throw new Error(d?.error || "提交失败");
+      if (!r.ok) throw new Error(d?.error || t("submitFailed"));
 
       setTaskId(d.taskId);
       setStatus(d.status);
       await pollTask(d.taskId);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "生成失败");
+      setError(e instanceof Error ? e.message : t("genFailed"));
     } finally {
       setLoading(false);
     }
@@ -81,9 +83,11 @@ export default function ImageNewPage() {
   return (
     <main className="min-h-screen bg-background text-foreground px-4 py-10">
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold tracking-tight">文生图</h1>
+        <h1 className="text-3xl font-bold tracking-tight">
+          {t("title")}
+        </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          百炼 Wanx 文生图最小 MVP 链路
+          {t("subtitle")}
         </p>
 
         <div className="mt-6 rounded-2xl border border-border bg-card p-4 space-y-3">
@@ -113,7 +117,7 @@ export default function ImageNewPage() {
             disabled={loading || !prompt.trim()}
             className="rounded-lg bg-primary text-primary-foreground px-4 py-2 text-sm disabled:opacity-50"
           >
-            {loading ? "生成中..." : "开始生成"}
+            {loading ? t("generating") : t("start")}
           </button>
 
           {taskId && (

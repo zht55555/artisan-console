@@ -1,0 +1,118 @@
+{
+  "nav": {
+    "chat": "Chat",
+    "templates": "Templates",
+    "debug": "Debug",
+    "toggleTheme": "Toggle theme",
+    "switchLang": "中"
+  },
+  "chat": {
+    "newSession": "New Session",
+    "createSessionFailed": "Failed to create session",
+    "modelBadgeTurbo": "Fast",
+    "modelBadgePlus": "Balanced",
+    "modelBadgeMax": "Powerful",
+    "suggestions": [
+      "Write a poem about midnight",
+      "Explain quantum entanglement",
+      "Design a modern login page",
+      "Optimize this React code"
+    ],
+    "featureLabels": ["Lightning Fast", "Easy to Use", "AI Powered"],
+    "followUpOptimize": "Enhance Details",
+    "followUpMarketing": "Ad Copy",
+    "followUpVariants": "3 Variants",
+    "hero": {
+      "badge": "Multi-model · Streaming · Image Upload",
+      "titleLine1": "Turn your ideas into",
+      "titleHighlight": "Amazing Conversations",
+      "subtitle": "Get high-quality AI responses in seconds. Supports text & image input with flexible model switching."
+    },
+    "composer": {
+      "tabChat": "Chat",
+      "tabImage": "Text to Image",
+      "sseHint": "SSE streaming",
+      "pollHint": "Image task polling",
+      "placeholderChat": "Type your idea…",
+      "placeholderImage": "Describe your image…",
+      "uploadImage": "Image",
+      "stop": "Stop",
+      "send": "Send",
+      "generating": "Generating",
+      "generateImage": "Generate Image",
+      "imageModHint": "Image mode generates directly, no model switch needed",
+      "useLastChat": "Use last chat as prompt",
+      "enterEdit": "Edit"
+    },
+    "message": {
+      "canceled": "Canceled",
+      "retry": "Retry",
+      "generatedImage": "Generated image: {prompt}",
+      "generatedImageEmpty": "Image generated",
+      "optimizePrompt": "Based on \"{ctx}\", provide 3 actionable detail enhancement suggestions with their best use cases.",
+      "marketingPrompt": "Based on \"{ctx}\", write 3 ad copies in different styles (Professional, Youthful, Minimal).",
+      "variantsPrompt": "Based on \"{ctx}\", design 3 visual variant directions with keywords, color palette, and composition tips."
+    },
+    "errors": {
+      "unknown": "Unknown error",
+      "queryTaskFailed": "Failed to query image task",
+      "createImageTaskFailed": "Failed to create image task",
+      "missingTaskId": "Image task missing taskId",
+      "pollTimeout": "Image task polling timed out",
+      "taskEnded": "Task ended: {status}",
+      "requestFailed": "Request failed: {msg}"
+    }
+  },
+  "history": {
+    "title": "History",
+    "subtitle": "Filter by type: chat / image / edit",
+    "filters": {
+      "all": "All",
+      "chat": "Chat",
+      "image": "Text to Image",
+      "edit": "Image Edit"
+    },
+    "loading": "Loading...",
+    "empty": "No records found",
+    "loadFailed": "Failed to load"
+  },
+  "prompts": {
+    "batchLabel": "Batch 5",
+    "title": "Prompt Template Workbench",
+    "subtitle": "Supports CRUD, variable extraction and one-click apply.",
+    "fieldName": "Template Name",
+    "fieldDesc": "Description",
+    "fieldTemplate": "Template Body (variable format: {varFormat})",
+    "fieldValues": "Variable JSON",
+    "create": "Create Template",
+    "update": "Update Selected",
+    "remove": "Delete Selected",
+    "apply": "Apply Template & Preview Prompt",
+    "listTitle": "Template List",
+    "listEmpty": "No templates yet. Create one first.",
+    "selectedTitle": "Selected",
+    "selectedNone": "None selected",
+    "noVars": "No variables",
+    "outputTitle": "API Output"
+  },
+  "imageNew": {
+    "title": "Text to Image",
+    "subtitle": "Bailian Wanx minimal MVP pipeline",
+    "generating": "Generating...",
+    "start": "Start Generating",
+    "queryFailed": "Failed to query task",
+    "submitFailed": "Submit failed",
+    "genFailed": "Generation failed"
+  },
+  "debug": {
+    "description": "For quickly validating generation and edit API pipelines.",
+    "openChat": "Open Chat Page /chat",
+    "openTemplates": "Open Templates Page /prompts",
+    "step1": "Step 1: Initialize anonymous identity",
+    "step2": "Step 2: Create text-to-image task",
+    "step3": "Step 3: Task status and completion",
+    "step4": "Step 4: Create image edit task",
+    "sourceAssetHint": "sourceAssetId (from previous mock-complete response)",
+    "output": "Output"
+  }
+}

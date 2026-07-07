@@ -1,18 +1,21 @@
 "use client";
 
 import { useTheme } from "@/components/theme-provider";
+import { LocaleSwitcher } from "@/components/locale-switcher";
+import { useTranslations } from "next-intl";
 import { Sun, Moon, MessageCircle, FileText, Wrench } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 export function Navbar() {
   const { theme, toggle } = useTheme();
+  const t = useTranslations("nav");
   const pathname = usePathname();
 
   const links = [
-    { href: "/chat", label: "对话", icon: MessageCircle },
-    { href: "/prompts", label: "模板", icon: FileText },
-    { href: "/debug", label: "调试", icon: Wrench },
+    { href: "/chat", label: t("chat"), icon: MessageCircle },
+    { href: "/prompts", label: t("templates"), icon: FileText },
+    { href: "/debug", label: t("debug"), icon: Wrench },
   ];
 
   return (
@@ -44,19 +47,23 @@ export function Navbar() {
           ))}
         </nav>
 
-        {/* Theme Toggle */}
-        <button
-          type="button"
-          onClick={toggle}
-          aria-label="切换主题"
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--panel-border)] text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--panel)] transition-colors"
-        >
-          {theme === "light" ? (
-            <Moon className="h-4 w-4" />
-          ) : (
-            <Sun className="h-4 w-4" />
-          )}
-        </button>
+        {/* Right controls */}
+        <div className="flex items-center gap-2">
+          <LocaleSwitcher className="flex h-8 min-w-[2rem] items-center justify-center rounded-lg border border-[var(--panel-border)] px-2 text-xs font-medium text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--panel)] transition-colors" />
+
+          <button
+            type="button"
+            onClick={toggle}
+            aria-label={t("toggleTheme")}
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--panel-border)] text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--panel)] transition-colors"
+          >
+            {theme === "light" ? (
+              <Moon className="h-4 w-4" />
+            ) : (
+              <Sun className="h-4 w-4" />
+            )}
+          </button>
+        </div>
       </div>
     </header>
   );

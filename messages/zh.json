@@ -1,0 +1,118 @@
+{
+  "nav": {
+    "chat": "对话",
+    "templates": "模板",
+    "debug": "调试",
+    "toggleTheme": "切换主题",
+    "switchLang": "EN"
+  },
+  "chat": {
+    "newSession": "新会话",
+    "createSessionFailed": "创建会话失败",
+    "modelBadgeTurbo": "快速",
+    "modelBadgePlus": "平衡",
+    "modelBadgeMax": "强力",
+    "suggestions": [
+      "帮我写一首关于深夜的诗",
+      "解释一下量子纠缠",
+      "设计一个现代登录页面",
+      "优化这段 React 代码"
+    ],
+    "featureLabels": ["闪电般快速", "简单易用", "AI 驱动"],
+    "followUpOptimize": "细节增强",
+    "followUpMarketing": "商用文案",
+    "followUpVariants": "再出 3 版",
+    "hero": {
+      "badge": "支持多模型 · 流式输出 · 图片上传",
+      "titleLine1": "将你的想法转化为",
+      "titleHighlight": "精彩对话",
+      "subtitle": "在几秒内获得高质量 AI 回答。支持文字、图片输入，多模型自由切换。"
+    },
+    "composer": {
+      "tabChat": "对话",
+      "tabImage": "文生图",
+      "sseHint": "SSE 流式返回",
+      "pollHint": "图片任务轮询返回",
+      "placeholderChat": "输入你的想法…",
+      "placeholderImage": "输入图片描述…",
+      "uploadImage": "图片",
+      "stop": "停止",
+      "send": "发送",
+      "generating": "生成中",
+      "generateImage": "生成图片",
+      "imageModHint": "文生图模式下直接生成，不需要模型切换",
+      "useLastChat": "用上一轮对话出图",
+      "enterEdit": "进入编辑"
+    },
+    "message": {
+      "canceled": "已中断",
+      "retry": "重新发送",
+      "generatedImage": "已为你生成图片：{prompt}",
+      "generatedImageEmpty": "已为你生成图片",
+      "optimizePrompt": "请基于{ctx}给出 3 个可执行的细节增强方案，并说明分别适合的使用场景。",
+      "marketingPrompt": "请基于{ctx}生成 3 条不同风格的商用宣传文案（专业版、年轻版、极简版）。",
+      "variantsPrompt": "请基于{ctx}设计 3 个视觉变体方向，分别说明关键词、色彩和构图建议。"
+    },
+    "errors": {
+      "unknown": "未知错误",
+      "queryTaskFailed": "查询图片任务失败",
+      "createImageTaskFailed": "创建图片任务失败",
+      "missingTaskId": "图片任务缺少 taskId",
+      "pollTimeout": "图片任务轮询超时",
+      "taskEnded": "任务已结束：{status}",
+      "requestFailed": "请求失败: {msg}"
+    }
+  },
+  "history": {
+    "title": "历史记录",
+    "subtitle": "按类型筛选 chat / image / edit",
+    "filters": {
+      "all": "全部",
+      "chat": "对话",
+      "image": "文生图",
+      "edit": "图像编辑"
+    },
+    "loading": "加载中...",
+    "empty": "暂无记录",
+    "loadFailed": "加载失败"
+  },
+  "prompts": {
+    "batchLabel": "Batch 5",
+    "title": "Prompt 模板工作台",
+    "subtitle": "支持模板 CRUD、变量提取与一键套用。",
+    "fieldName": "模板名",
+    "fieldDesc": "描述",
+    "fieldTemplate": "模板正文（变量格式: {varFormat}）",
+    "fieldValues": "变量 JSON",
+    "create": "新建模板",
+    "update": "更新所选",
+    "remove": "删除所选",
+    "apply": "套用模板并预览 Prompt",
+    "listTitle": "模板列表",
+    "listEmpty": "暂无模板，先创建一个。",
+    "selectedTitle": "当前选中",
+    "selectedNone": "未选择",
+    "noVars": "无变量",
+    "outputTitle": "接口输出"
+  },
+  "imageNew": {
+    "title": "文生图",
+    "subtitle": "百炼 Wanx 文生图最小 MVP 链路",
+    "generating": "生成中...",
+    "start": "开始生成",
+    "queryFailed": "查询任务失败",
+    "submitFailed": "提交失败",
+    "genFailed": "生成失败"
+  },
+  "debug": {
+    "description": "用于快速验证生成与编辑接口链路。",
+    "openChat": "打开聊天流式页 /chat",
+    "openTemplates": "打开模板页 /prompts",
+    "step1": "Step 1: 初始化匿名身份",
+    "step2": "Step 2: 创建文生图任务",
+    "step3": "Step 3: 任务状态与完成",
+    "step4": "Step 4: 创建图像编辑任务",
+    "sourceAssetHint": "sourceAssetId (可来自上一步 mock-complete 返回)",
+    "output": "输出"
+  }
+}

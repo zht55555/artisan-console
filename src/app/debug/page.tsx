@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { useTranslations } from "next-intl";
 
 type JsonValue =
   | Record<string, unknown>
@@ -25,13 +26,17 @@ async function requestJson(
   url: string,
   init?: RequestInit,
 ): Promise<JsonValue> {
-  const response = await fetchWithRetry(url, {
-    ...init,
-    headers: {
-      "content-type": "application/json",
-      ...(init?.headers ?? {}),
+  const response = await fetchWithRetry(
+    url,
+    {
+      ...init,
+      headers: {
+        "content-type": "application/json",
+        ...(init?.headers ?? {}),
+      },
     },
-  }, { retries: 3, retryUnsafeMethods: true });
+    { retries: 3, retryUnsafeMethods: true },
+  );
 
   const data = await response
     .json()
@@ -49,6 +54,7 @@ async function requestJson(
 }
 
 export default function DebugPage() {
+  const t = useTranslations("debug");
   const [prompt, setPrompt] = useState("A cyberpunk cat in neon rain");
   const [editPrompt, setEditPrompt] = useState(
     "Add cinematic lighting and film grain",
@@ -98,13 +104,13 @@ export default function DebugPage() {
                 Batch 1/2/3
               </Badge>
               <CardTitle>Artisan API Debug Panel</CardTitle>
-              <CardDescription>用于快速验证生成与编辑接口链路。</CardDescription>
+              <CardDescription>{t("description")}</CardDescription>
               <div className="flex gap-2 pt-1">
                 <Button asChild variant="secondary">
-                  <a href="/chat">打开聊天流式页 /chat</a>
+                  <a href="/chat">{t("openChat")}</a>
                 </Button>
                 <Button asChild variant="secondary">
-                  <a href="/prompts">打开模板页 /prompts</a>
+                  <a href="/prompts">{t("openTemplates")}</a>
                 </Button>
               </div>
             </CardHeader>
@@ -112,12 +118,14 @@ export default function DebugPage() {
 
           <Card>
             <CardContent className="space-y-3">
-              <h2 className="font-medium">Step 1: 初始化匿名身份</h2>
+              <h2 className="font-medium">{t("step1")}</h2>
               <Button
                 type="button"
                 disabled={loading}
                 onClick={() =>
-                  run(() => requestJson("/api/auth/visitor", { method: "POST" }))
+                  run(() =>
+                    requestJson("/api/auth/visitor", { method: "POST" }),
+                  )
                 }
               >
                 POST /api/auth/visitor
@@ -127,7 +135,7 @@ export default function DebugPage() {
 
           <Card>
             <CardContent className="space-y-3">
-              <h2 className="font-medium">Step 2: 创建文生图任务</h2>
+              <h2 className="font-medium">{t("step2")}</h2>
               <Input
                 value={prompt}
                 onChange={(event) => setPrompt(event.target.value)}
@@ -156,7 +164,7 @@ export default function DebugPage() {
 
           <Card>
             <CardContent className="space-y-3">
-              <h2 className="font-medium">Step 3: 任务状态与完成</h2>
+              <h2 className="font-medium">{t("step3")}</h2>
               <Input
                 value={taskId}
                 onChange={(event) => setTaskId(event.target.value)}
@@ -166,7 +174,9 @@ export default function DebugPage() {
                 <Button
                   type="button"
                   disabled={loading || !taskId}
-                  onClick={() => run(() => requestJson(`/api/v1/generations/${taskId}`))}
+                  onClick={() =>
+                    run(() => requestJson(`/api/v1/generations/${taskId}`))
+                  }
                 >
                   GET /api/v1/generations/:id
                 </Button>
@@ -176,9 +186,12 @@ export default function DebugPage() {
                   disabled={loading || !taskId}
                   onClick={() =>
                     run(() =>
-                      requestJson(`/api/v1/generations/${taskId}/mock-complete`, {
-                        method: "POST",
-                      }),
+                      requestJson(
+                        `/api/v1/generations/${taskId}/mock-complete`,
+                        {
+                          method: "POST",
+                        },
+                      ),
                     )
                   }
                 >
@@ -204,11 +217,11 @@ export default function DebugPage() {
 
           <Card>
             <CardContent className="space-y-3">
-              <h2 className="font-medium">Step 4: 创建图像编辑任务</h2>
+              <h2 className="font-medium">{t("step4")}</h2>
               <Input
                 value={sourceAssetId}
                 onChange={(event) => setSourceAssetId(event.target.value)}
-                placeholder="sourceAssetId (可来自上一步 mock-complete 返回)"
+                placeholder={t("sourceAssetHint")}
               />
               <Input
                 value={editPrompt}
@@ -238,7 +251,7 @@ export default function DebugPage() {
 
           <Card>
             <CardContent>
-              <h2 className="mb-2 font-medium">输出</h2>
+              <h2 className="mb-2 font-medium">{t("output")}</h2>
               <pre className="max-h-[360px] overflow-auto rounded-xl border border-white/10 bg-black/60 p-3 text-xs text-zinc-100">
                 {JSON.stringify(output, null, 2)}
               </pre>

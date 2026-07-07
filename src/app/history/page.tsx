@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { fetchWithRetry } from "@/lib/retry";
+import { useTranslations } from "next-intl";
 
 type HistoryItem = {
   type: "chat" | "image" | "edit";
@@ -12,17 +13,18 @@ type HistoryItem = {
   createdAt: string;
 };
 
-const FILTERS: Array<{
-  value: "all" | "chat" | "image" | "edit";
-  label: string;
-}> = [
-  { value: "all", label: "全部" },
-  { value: "chat", label: "对话" },
-  { value: "image", label: "文生图" },
-  { value: "edit", label: "图像编辑" },
-];
-
 export default function HistoryPage() {
+  const t = useTranslations("history");
+  const FILTERS: Array<{
+    value: "all" | "chat" | "image" | "edit";
+    label: string;
+  }> = [
+    { value: "all", label: t("filters.all") },
+    { value: "chat", label: t("filters.chat") },
+    { value: "image", label: t("filters.image") },
+    { value: "edit", label: t("filters.edit") },
+  ];
+
   const [filter, setFilter] = useState<"all" | "chat" | "image" | "edit">(
     "all",
   );
@@ -37,23 +39,23 @@ export default function HistoryPage() {
       try {
         const r = await fetchWithRetry(`/api/v1/history?type=${filter}`);
         const d = await r.json();
-        if (!r.ok) throw new Error(d?.error || "加载失败");
+        if (!r.ok) throw new Error(d?.error || t("loadFailed"));
         setItems(d.items || []);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "加载失败");
+        setError(e instanceof Error ? e.message : t("loadFailed"));
       } finally {
         setLoading(false);
       }
     };
     run();
-  }, [filter]);
+  }, [filter, t]);
 
   return (
     <main className="min-h-screen bg-background text-foreground px-4 py-10">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold tracking-tight">历史记录</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          按类型筛选 chat / image / edit
+          {t("subtitle")}
         </p>
 
         <div className="mt-5 flex gap-2">
@@ -74,11 +76,15 @@ export default function HistoryPage() {
 
         <div className="mt-6 rounded-2xl border border-border bg-card p-4">
           {loading && (
-            <div className="text-sm text-muted-foreground">加载中...</div>
+            <div className="text-sm text-muted-foreground">
+              {t("loading")}
+            </div>
           )}
           {error && <div className="text-sm text-red-500">{error}</div>}
           {!loading && !error && items.length === 0 && (
-            <div className="text-sm text-muted-foreground">暂无记录</div>
+            <div className="text-sm text-muted-foreground">
+              {t("empty")}
+            </div>
           )}
 
           <div className="space-y-3">
