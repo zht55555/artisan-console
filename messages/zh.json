@@ -1,6 +1,7 @@
 {
   "nav": {
     "chat": "对话",
+    "video": "视频",
     "templates": "模板",
     "debug": "调试",
     "toggleTheme": "切换主题",

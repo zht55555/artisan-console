@@ -9,8 +9,6 @@ import {
   Zap,
   ChevronDown,
   RotateCcw,
-  Moon,
-  Sun,
   ImageIcon,
   Cpu,
   Sparkles,
@@ -19,7 +17,6 @@ import {
 import { motion } from "framer-motion";
 import { fetchWithRetry } from "@/lib/retry";
 import { useTranslations } from "next-intl";
-import { LocaleSwitcher } from "@/components/locale-switcher";
 
 /* ────────────────────────────────────────
    Types
@@ -215,8 +212,7 @@ async function ensureConvId(
    Main Page
    ════════════════════════════════════════ */
 export default function ChatPage() {
-  const { dark, toggle } = useTheme();
-  const tNav = useTranslations("nav");
+  const { dark } = useTheme();
   const tChat = useTranslations("chat");
 
   const MODELS = [
@@ -879,41 +875,6 @@ export default function ChatPage() {
       <div className="pointer-events-none fixed inset-0 z-[-1] overflow-hidden">
         <DecoSlashes />
       </div>
-
-      {/* ── Navbar ── */}
-      <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
-        <div className="container mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
-              <Zap
-                size={15}
-                className="text-primary-foreground"
-                fill="currentColor"
-              />
-            </div>
-            <span className="font-semibold text-sm tracking-tight">
-              Artisan
-            </span>
-          </div>
-          <nav className="flex items-center gap-0.5 text-sm text-muted-foreground">
-            <Link
-              href="/chat"
-              className="px-3 py-1.5 rounded-lg hover:text-foreground hover:bg-muted/60 transition-colors"
-            >
-              {tNav("chat")}
-            </Link>
-          </nav>
-          <div className="flex items-center gap-2">
-            <LocaleSwitcher className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors" />
-            <button
-              onClick={toggle}
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-            >
-              {dark ? <Sun size={16} /> : <Moon size={16} />}
-            </button>
-          </div>
-        </div>
-      </header>
 
       {/* ══════════════════════════════════════
           EMPTY / HERO MODE  (VideoFly layout)

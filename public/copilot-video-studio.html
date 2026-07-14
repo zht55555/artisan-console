@@ -1,0 +1,1372 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>视频生成工作台</title>
+    <style>
+      :root {
+        --bg: #08101f;
+        --panel: rgba(16, 24, 42, 0.88);
+        --panel-strong: #111b31;
+        --panel-soft: rgba(22, 34, 58, 0.74);
+        --line: rgba(122, 162, 255, 0.14);
+        --line-strong: rgba(122, 162, 255, 0.28);
+        --text: #edf4ff;
+        --muted: #8ea3c9;
+        --accent: #4f8cff;
+        --accent-strong: #7ab2ff;
+        --danger: #ff6f8f;
+        --success: #3cd09d;
+        --shadow: 0 24px 64px rgba(0, 0, 0, 0.42);
+        --radius-xl: 24px;
+        --radius-lg: 18px;
+        --radius-md: 14px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background:
+          radial-gradient(circle at top left, rgba(80, 140, 255, 0.2), transparent 26%),
+          radial-gradient(circle at top right, rgba(54, 116, 255, 0.16), transparent 22%),
+          linear-gradient(180deg, #0a1224 0%, #070d18 100%);
+        color: var(--text);
+        font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+      }
+
+      body {
+        padding: 18px;
+      }
+
+      .shell {
+        display: grid;
+        grid-template-columns: 300px minmax(480px, 1fr) 420px;
+        gap: 18px;
+        min-height: calc(100vh - 36px);
+      }
+
+      .panel {
+        position: relative;
+        overflow: hidden;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(22px);
+      }
+
+      .panel::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 28%);
+        pointer-events: none;
+      }
+
+      .sidebar,
+      .composer,
+      .preview {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .sidebar {
+        padding: 18px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 14px;
+        border-radius: var(--radius-lg);
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--line);
+      }
+
+      .brand-title {
+        font-size: 18px;
+        font-weight: 700;
+      }
+
+      .brand-subtitle {
+        margin-top: 4px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .model-chip {
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(79, 140, 255, 0.15);
+        border: 1px solid rgba(122, 178, 255, 0.24);
+        color: var(--accent-strong);
+        font-size: 12px;
+      }
+
+      .section-title {
+        margin: 22px 0 10px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #c7d8fb;
+      }
+
+      .mode-switch {
+        display: grid;
+        gap: 10px;
+      }
+
+      .mode-button,
+      .history-item,
+      .chip,
+      .action-button,
+      .icon-button,
+      .speed-button {
+        transition: 180ms ease;
+      }
+
+      .mode-button {
+        width: 100%;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.03);
+        color: var(--text);
+        border-radius: var(--radius-lg);
+        padding: 14px 16px;
+        text-align: left;
+        cursor: pointer;
+      }
+
+      .mode-button:hover,
+      .history-item:hover,
+      .chip:hover,
+      .action-button:hover,
+      .icon-button:hover,
+      .speed-button:hover {
+        transform: translateY(-1px);
+        border-color: var(--line-strong);
+        background: rgba(255, 255, 255, 0.055);
+      }
+
+      .mode-button.active,
+      .chip.active,
+      .speed-button.active {
+        background: linear-gradient(135deg, rgba(79, 140, 255, 0.22), rgba(79, 140, 255, 0.12));
+        border-color: rgba(122, 178, 255, 0.46);
+        box-shadow: inset 0 0 0 1px rgba(122, 178, 255, 0.12);
+      }
+
+      .mode-name {
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .mode-desc,
+      .meta-line,
+      .empty-text,
+      .upload-note,
+      .slider-value {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .history-tools {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+
+      .text-button {
+        border: 0;
+        background: transparent;
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 12px;
+        padding: 0;
+      }
+
+      .text-button:hover {
+        color: var(--text);
+      }
+
+      .history-list {
+        display: grid;
+        gap: 10px;
+        overflow: auto;
+        padding-right: 4px;
+      }
+
+      .history-item {
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: var(--radius-lg);
+        padding: 14px;
+        cursor: pointer;
+      }
+
+      .history-item.active {
+        border-color: rgba(122, 178, 255, 0.48);
+        background: rgba(79, 140, 255, 0.12);
+      }
+
+      .history-item-head,
+      .result-actions,
+      .section-head,
+      .preview-head,
+      .preview-actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .history-title,
+      .result-title,
+      .input-label,
+      .slider-label,
+      .preview-title {
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .tiny-danger {
+        color: var(--danger);
+      }
+
+      .composer {
+        padding: 20px;
+        gap: 18px;
+      }
+
+      .section-card {
+        position: relative;
+        padding: 18px;
+        border-radius: var(--radius-xl);
+        background: rgba(9, 15, 28, 0.62);
+        border: 1px solid var(--line);
+      }
+
+      .section-card.glow::after {
+        content: "";
+        position: absolute;
+        inset: auto 14% -80px 14%;
+        height: 120px;
+        background: radial-gradient(circle, rgba(79, 140, 255, 0.24), transparent 70%);
+        filter: blur(18px);
+        pointer-events: none;
+      }
+
+      .hero-title {
+        margin: 0;
+        font-size: 28px;
+        line-height: 1.2;
+      }
+
+      .hero-subtitle {
+        margin: 10px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      .textarea {
+        width: 100%;
+        min-height: 164px;
+        resize: vertical;
+        border: 1px solid var(--line);
+        background: rgba(3, 9, 19, 0.72);
+        color: var(--text);
+        border-radius: 20px;
+        padding: 18px;
+        font: inherit;
+        outline: none;
+      }
+
+      .textarea:focus,
+      .dropzone.dragging {
+        border-color: rgba(122, 178, 255, 0.52);
+        box-shadow: 0 0 0 4px rgba(79, 140, 255, 0.1);
+      }
+
+      .dropzone {
+        border: 1px dashed rgba(122, 178, 255, 0.34);
+        background: linear-gradient(180deg, rgba(11, 19, 34, 0.82), rgba(8, 13, 24, 0.92));
+        border-radius: 20px;
+        padding: 18px;
+      }
+
+      .dropzone-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .upload-button,
+      .generate-button {
+        border: 0;
+        border-radius: 16px;
+        cursor: pointer;
+        font: inherit;
+      }
+
+      .upload-button {
+        padding: 12px 18px;
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--text);
+        border: 1px solid var(--line);
+      }
+
+      .generate-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        min-width: 132px;
+        padding: 14px 22px;
+        background: linear-gradient(135deg, #4787ff 0%, #62a5ff 100%);
+        color: white;
+        font-weight: 700;
+        box-shadow: 0 18px 40px rgba(71, 135, 255, 0.36);
+      }
+
+      .generate-button:disabled {
+        opacity: 0.72;
+        cursor: wait;
+      }
+
+      .toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .chip,
+      .speed-button,
+      .action-button,
+      .icon-button {
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.03);
+        color: var(--text);
+        border-radius: 14px;
+        cursor: pointer;
+      }
+
+      .chip,
+      .speed-button {
+        padding: 10px 14px;
+        font-size: 13px;
+      }
+
+      .grid-params {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .param-group {
+        display: grid;
+        gap: 10px;
+      }
+
+      .upload-list,
+      .result-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .upload-list {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .upload-card,
+      .result-card {
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.03);
+        overflow: hidden;
+      }
+
+      .upload-thumb,
+      .result-thumb {
+        position: relative;
+        background:
+          radial-gradient(circle at top, rgba(121, 175, 255, 0.3), transparent 42%),
+          linear-gradient(135deg, #0f1730, #1a2b56 50%, #0b1222);
+      }
+
+      .upload-thumb {
+        aspect-ratio: 1;
+      }
+
+      .upload-thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      .progress-bar {
+        position: absolute;
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
+        height: 6px;
+        border-radius: 999px;
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.14);
+      }
+
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #4f8cff, #7ab2ff);
+      }
+
+      .upload-meta,
+      .result-meta {
+        padding: 12px;
+      }
+
+      .result-thumb {
+        aspect-ratio: 16 / 10;
+        display: flex;
+        align-items: flex-end;
+        padding: 12px;
+      }
+
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        background: rgba(3, 11, 22, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .pulse {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: var(--success);
+        box-shadow: 0 0 0 rgba(60, 208, 157, 0.4);
+        animation: pulse 1.4s infinite;
+      }
+
+      @keyframes pulse {
+        0% {
+          box-shadow: 0 0 0 0 rgba(60, 208, 157, 0.4);
+        }
+        70% {
+          box-shadow: 0 0 0 12px rgba(60, 208, 157, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(60, 208, 157, 0);
+        }
+      }
+
+      .preview {
+        padding: 20px;
+        gap: 18px;
+      }
+
+      .preview-stage {
+        position: relative;
+        min-height: 320px;
+        border-radius: 24px;
+        border: 1px solid var(--line);
+        overflow: hidden;
+        background:
+          linear-gradient(145deg, rgba(11, 17, 31, 0.92), rgba(18, 30, 59, 0.96)),
+          linear-gradient(180deg, rgba(79, 140, 255, 0.16), transparent 55%);
+      }
+
+      .preview-canvas {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(circle at var(--focus-x, 50%) var(--focus-y, 50%), rgba(122, 178, 255, 0.3), transparent 24%),
+          linear-gradient(180deg, rgba(24, 34, 61, 0.38), rgba(5, 10, 20, 0.1)),
+          linear-gradient(135deg, #091120, #162746 55%, #0b1221);
+        filter: brightness(var(--brightness, 1)) contrast(var(--contrast, 1)) saturate(calc(1 + var(--atmosphere, 0.2))) blur(0px);
+      }
+
+      .preview-canvas::before,
+      .preview-canvas::after {
+        content: "";
+        position: absolute;
+        border-radius: 999px;
+        background: rgba(122, 178, 255, 0.12);
+        animation: floatX var(--duration, 7s) linear infinite;
+      }
+
+      .preview-canvas::before {
+        width: 160px;
+        height: 160px;
+        top: 18%;
+        left: -10%;
+      }
+
+      .preview-canvas::after {
+        width: 220px;
+        height: 220px;
+        right: -18%;
+        bottom: 8%;
+        animation-direction: reverse;
+      }
+
+      @keyframes floatX {
+        from {
+          transform: translateX(0) scale(1);
+        }
+        50% {
+          transform: translateX(42px) scale(1.08);
+        }
+        to {
+          transform: translateX(0) scale(1);
+        }
+      }
+
+      .preview-overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 18px;
+      }
+
+      .preview-frame {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex: 1;
+      }
+
+      .preview-badge {
+        padding: 10px 14px;
+        border-radius: 16px;
+        font-size: 12px;
+        color: #d9e8ff;
+        background: rgba(5, 9, 18, 0.44);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(10px);
+      }
+
+      .play-core {
+        width: 84px;
+        height: 84px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(10px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+      }
+
+      .timeline {
+        height: 8px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.12);
+        overflow: hidden;
+      }
+
+      .timeline-fill {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #4f8cff, #7ab2ff);
+      }
+
+      .sliders {
+        display: grid;
+        gap: 14px;
+      }
+
+      .slider-row {
+        display: grid;
+        gap: 8px;
+      }
+
+      .slider-top {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      input[type="range"] {
+        width: 100%;
+        accent-color: var(--accent);
+      }
+
+      .result-actions {
+        margin-top: 12px;
+      }
+
+      .action-button,
+      .icon-button {
+        padding: 10px 14px;
+        font-size: 13px;
+      }
+
+      .icon-button {
+        padding: 10px 12px;
+      }
+
+      .preview-actions {
+        flex-wrap: wrap;
+      }
+
+      .empty-state {
+        padding: 18px;
+        border-radius: 18px;
+        border: 1px dashed var(--line);
+        color: var(--muted);
+      }
+
+      .spinner {
+        width: 16px;
+        height: 16px;
+        border-radius: 999px;
+        border: 2px solid rgba(255, 255, 255, 0.28);
+        border-top-color: white;
+        animation: spin 0.9s linear infinite;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .hidden {
+        display: none !important;
+      }
+
+      @media (max-width: 1360px) {
+        .shell {
+          grid-template-columns: 280px 1fr;
+        }
+
+        .preview {
+          grid-column: span 2;
+        }
+      }
+
+      @media (max-width: 980px) {
+        body {
+          padding: 12px;
+        }
+
+        .shell {
+          grid-template-columns: 1fr;
+        }
+
+        .grid-params,
+        .upload-list {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="panel sidebar">
+        <div class="brand">
+          <div>
+            <div class="brand-title">视频生成</div>
+            <div class="brand-subtitle">纯前端模拟 · 阿里模型</div>
+          </div>
+          <div class="model-chip">Wanx</div>
+        </div>
+
+        <div class="section-title">功能</div>
+        <div class="mode-switch">
+          <button class="mode-button active" data-mode="text">
+            <div class="mode-name">文生视频</div>
+            <div class="mode-desc">输入中文描述，直接生成</div>
+          </button>
+          <button class="mode-button" data-mode="image">
+            <div class="mode-name">图生视频</div>
+            <div class="mode-desc">上传图片，支持最多 9 张</div>
+          </button>
+        </div>
+
+        <div class="section-title">历史记录</div>
+        <div class="history-tools">
+          <div class="meta-line">可点击加载，可删除</div>
+          <button class="text-button" id="clearHistoryButton">清空历史</button>
+        </div>
+        <div class="history-list" id="historyList"></div>
+      </aside>
+
+      <main class="panel composer">
+        <section class="section-card glow">
+          <div class="section-head">
+            <div>
+              <h1 class="hero-title">视频生成工作台</h1>
+              <p class="hero-subtitle">
+                深色蓝调、左中右工作区、纯前端状态模拟，包含文生视频、图生视频、参数调节、历史记录与结果卡片。
+              </p>
+            </div>
+            <button class="generate-button" id="generateButton">
+              <span id="generateSpinner" class="spinner hidden"></span>
+              <span id="generateLabel">生成</span>
+            </button>
+          </div>
+        </section>
+
+        <section class="section-card">
+          <div class="input-label">输入内容</div>
+          <textarea
+            class="textarea"
+            id="promptInput"
+            placeholder="请输入中文视频描述，例如：深夜雨巷里，镜头从霓虹反光的地面缓缓推近，一位穿风衣的人回头看向镜头。"
+          ></textarea>
+        </section>
+
+        <section class="section-card hidden" id="uploadSection">
+          <div class="input-label">上传图片</div>
+          <div class="dropzone" id="dropzone">
+            <div class="dropzone-inner">
+              <div>
+                <div class="mode-name">拖拽上传图片</div>
+                <div class="upload-note">最多 9 张，支持本地预览和上传进度模拟</div>
+              </div>
+              <div>
+                <input id="fileInput" type="file" accept="image/*" multiple class="hidden" />
+                <button class="upload-button" id="uploadButton">上传图片</button>
+              </div>
+            </div>
+          </div>
+          <div class="upload-list" id="uploadList"></div>
+        </section>
+
+        <section class="section-card">
+          <div class="input-label">参数调节</div>
+          <div class="grid-params">
+            <div class="param-group">
+              <div class="meta-line">比例</div>
+              <div class="chips" id="ratioGroup"></div>
+            </div>
+            <div class="param-group">
+              <div class="meta-line">时长</div>
+              <div class="chips" id="durationGroup"></div>
+            </div>
+            <div class="param-group">
+              <div class="meta-line">运镜</div>
+              <div class="chips" id="cameraGroup"></div>
+            </div>
+            <div class="param-group">
+              <div class="meta-line">风格</div>
+              <div class="chips" id="styleGroup"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section-card">
+          <div class="section-head">
+            <div class="input-label">结果卡片</div>
+            <div class="meta-line" id="resultMeta">等待生成</div>
+          </div>
+          <div class="result-list" id="resultList"></div>
+        </section>
+      </main>
+
+      <aside class="panel preview">
+        <div class="preview-head">
+          <div>
+            <div class="preview-title">预览</div>
+            <div class="meta-line" id="previewMeta">未选择结果</div>
+          </div>
+          <div class="status-pill"><span class="pulse"></span><span id="previewStatus">待机</span></div>
+        </div>
+
+        <div class="preview-stage">
+          <div class="preview-canvas" id="previewCanvas"></div>
+          <div class="preview-overlay">
+            <div class="preview-actions">
+              <div class="preview-badge" id="previewBadge">阿里 Wanx · 文生视频</div>
+              <div class="preview-badge" id="previewDuration">5s</div>
+            </div>
+            <div class="preview-frame">
+              <div class="play-core" id="playToggle">▶</div>
+            </div>
+            <div>
+              <div class="timeline"><div class="timeline-fill" id="timelineFill"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <section class="section-card">
+          <div class="input-label">播放速度</div>
+          <div class="chips" id="speedGroup"></div>
+        </section>
+
+        <section class="section-card">
+          <div class="input-label">画面调节</div>
+          <div class="sliders">
+            <div class="slider-row">
+              <div class="slider-top"><span class="slider-label">亮度</span><span class="slider-value" id="brightnessValue">100%</span></div>
+              <input id="brightnessSlider" type="range" min="60" max="140" value="100" />
+            </div>
+            <div class="slider-row">
+              <div class="slider-top"><span class="slider-label">对比度</span><span class="slider-value" id="contrastValue">100%</span></div>
+              <input id="contrastSlider" type="range" min="70" max="150" value="100" />
+            </div>
+            <div class="slider-row">
+              <div class="slider-top"><span class="slider-label">锐度</span><span class="slider-value" id="sharpnessValue">0%</span></div>
+              <input id="sharpnessSlider" type="range" min="0" max="100" value="0" />
+            </div>
+            <div class="slider-row">
+              <div class="slider-top"><span class="slider-label">氛围浓度</span><span class="slider-value" id="atmosphereValue">20%</span></div>
+              <input id="atmosphereSlider" type="range" min="0" max="100" value="20" />
+            </div>
+            <div class="slider-row">
+              <div class="slider-top"><span class="slider-label">运镜幅度</span><span class="slider-value" id="motionValue">35%</span></div>
+              <input id="motionSlider" type="range" min="0" max="100" value="35" />
+            </div>
+          </div>
+        </section>
+
+        <section class="section-card">
+          <div class="input-label">当前操作</div>
+          <div class="preview-actions">
+            <button class="action-button" id="deleteButton">删除</button>
+            <button class="action-button" id="regenerateButton">重生成</button>
+            <button class="action-button" id="downloadButton">下载</button>
+          </div>
+        </section>
+      </aside>
+    </div>
+
+    <script>
+      const storageKey = "copilot-video-studio-history";
+      const maxImages = 9;
+      const state = {
+        mode: "text",
+        prompt: "深夜雨巷里，镜头从霓虹反光的地面缓缓推近，一位穿风衣的人回头看向镜头。",
+        uploads: [],
+        history: [],
+        selectedId: "",
+        generating: false,
+        isPlaying: true,
+        previewProgress: 0,
+        speed: 1,
+        filters: {
+          brightness: 100,
+          contrast: 100,
+          sharpness: 0,
+          atmosphere: 20,
+          motion: 35,
+        },
+        params: {
+          ratio: "9:16",
+          duration: "5s",
+          camera: "无",
+          style: "电影感",
+        },
+      };
+
+      const optionMap = {
+        ratio: ["9:16", "16:9"],
+        duration: ["5s", "10s"],
+        camera: ["无", "环绕", "推拉", "缩放"],
+        style: ["电影感", "写实", "动漫", "赛博朋克"],
+        speed: [0.5, 1, 1.5, 2],
+      };
+
+      const promptInput = document.getElementById("promptInput");
+      const uploadSection = document.getElementById("uploadSection");
+      const uploadList = document.getElementById("uploadList");
+      const historyList = document.getElementById("historyList");
+      const resultList = document.getElementById("resultList");
+      const generateButton = document.getElementById("generateButton");
+      const generateSpinner = document.getElementById("generateSpinner");
+      const generateLabel = document.getElementById("generateLabel");
+      const clearHistoryButton = document.getElementById("clearHistoryButton");
+      const previewCanvas = document.getElementById("previewCanvas");
+      const previewMeta = document.getElementById("previewMeta");
+      const previewStatus = document.getElementById("previewStatus");
+      const previewBadge = document.getElementById("previewBadge");
+      const previewDuration = document.getElementById("previewDuration");
+      const timelineFill = document.getElementById("timelineFill");
+      const playToggle = document.getElementById("playToggle");
+      const resultMeta = document.getElementById("resultMeta");
+      const fileInput = document.getElementById("fileInput");
+      const uploadButton = document.getElementById("uploadButton");
+      const dropzone = document.getElementById("dropzone");
+      const deleteButton = document.getElementById("deleteButton");
+      const regenerateButton = document.getElementById("regenerateButton");
+      const downloadButton = document.getElementById("downloadButton");
+
+      const sliderFields = [
+        ["brightness", "brightnessSlider", "brightnessValue"],
+        ["contrast", "contrastSlider", "contrastValue"],
+        ["sharpness", "sharpnessSlider", "sharpnessValue"],
+        ["atmosphere", "atmosphereSlider", "atmosphereValue"],
+        ["motion", "motionSlider", "motionValue"],
+      ];
+
+      function uid() {
+        return Math.random().toString(36).slice(2, 10);
+      }
+
+      function escapeHtml(value) {
+        return value
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/\"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function saveHistory() {
+        localStorage.setItem(storageKey, JSON.stringify(state.history));
+      }
+
+      function loadHistory() {
+        try {
+          const raw = localStorage.getItem(storageKey);
+          if (!raw) return;
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            state.history = parsed;
+            if (parsed[0]) {
+              state.selectedId = parsed[0].id;
+            }
+          }
+        } catch (error) {
+          console.warn("history parse failed", error);
+        }
+      }
+
+      function getSelectedItem() {
+        return state.history.find((item) => item.id === state.selectedId) || null;
+      }
+
+      function setMode(mode) {
+        state.mode = mode;
+        document.querySelectorAll("[data-mode]").forEach((button) => {
+          button.classList.toggle("active", button.dataset.mode === mode);
+        });
+        uploadSection.classList.toggle("hidden", mode !== "image");
+        previewBadge.textContent = `阿里 Wanx · ${mode === "image" ? "图生视频" : "文生视频"}`;
+      }
+
+      function renderChipGroup(targetId, field, values) {
+        const root = document.getElementById(targetId);
+        root.innerHTML = values
+          .map((value) => {
+            const active = field === "speed" ? state.speed === value : state.params[field] === value;
+            return `<button class="${field === "speed" ? "speed-button" : "chip"} ${active ? "active" : ""}" data-field="${field}" data-value="${value}">${value}${field === "speed" ? " 倍" : ""}</button>`;
+          })
+          .join("");
+      }
+
+      function renderUploads() {
+        if (!state.uploads.length) {
+          uploadList.innerHTML = '<div class="empty-state">暂无上传图片，点击“上传图片”或拖拽到此区域。</div>';
+          return;
+        }
+
+        uploadList.innerHTML = state.uploads
+          .map((file) => {
+            const thumb = file.url
+              ? `<img src="${file.url}" alt="${escapeHtml(file.name)}" />`
+              : "";
+            return `
+              <div class="upload-card">
+                <div class="upload-thumb">
+                  ${thumb}
+                  <div class="progress-bar"><div class="progress-fill" style="width:${file.progress}%"></div></div>
+                </div>
+                <div class="upload-meta">
+                  <div class="history-title">${escapeHtml(file.name)}</div>
+                  <div class="meta-line">上传进度 ${file.progress}%</div>
+                </div>
+              </div>`;
+          })
+          .join("");
+      }
+
+      function renderHistory() {
+        if (!state.history.length) {
+          historyList.innerHTML = '<div class="empty-state">暂无历史记录，点击“生成”后会自动保存。</div>';
+          return;
+        }
+
+        historyList.innerHTML = state.history
+          .map((item) => {
+            const active = item.id === state.selectedId ? "active" : "";
+            return `
+              <div class="history-item ${active}" data-history-id="${item.id}">
+                <div class="history-item-head">
+                  <div class="history-title">${escapeHtml(item.title)}</div>
+                  <button class="text-button tiny-danger" data-delete-id="${item.id}">删除</button>
+                </div>
+                <div class="meta-line">${item.mode === "image" ? "图生视频" : "文生视频"} · ${item.params.duration} · ${item.params.style}</div>
+                <div class="meta-line">${item.createdAt}</div>
+              </div>`;
+          })
+          .join("");
+      }
+
+      function renderResults() {
+        if (!state.history.length) {
+          resultList.innerHTML = '<div class="empty-state">结果会在这里展示，包括视频缩略图、提示词与操作按钮。</div>';
+          resultMeta.textContent = "等待生成";
+          return;
+        }
+
+        resultMeta.textContent = `共 ${state.history.length} 条结果`;
+        resultList.innerHTML = state.history
+          .map((item) => {
+            const prompt = escapeHtml(item.prompt || "未填写提示词");
+            const activeMark = item.id === state.selectedId ? "active" : "";
+            const progressBadge = item.status === "generating"
+              ? '<div class="status-pill"><span class="spinner"></span><span>生成中</span></div>'
+              : `<div class="status-pill"><span class="pulse"></span><span>${item.mode === "image" ? "图生视频" : "文生视频"}</span></div>`;
+            return `
+              <div class="result-card ${activeMark}" data-history-id="${item.id}">
+                <div class="result-thumb">
+                  ${progressBadge}
+                </div>
+                <div class="result-meta">
+                  <div class="result-title">${escapeHtml(item.title)}</div>
+                  <div class="meta-line">${prompt}</div>
+                  <div class="meta-line">${item.params.ratio} · ${item.params.duration} · ${item.params.camera} · ${item.params.style}</div>
+                  <div class="result-actions">
+                    <button class="action-button" data-delete-id="${item.id}">删除</button>
+                    <button class="action-button" data-regenerate-id="${item.id}">重生成</button>
+                    <button class="action-button" data-download-id="${item.id}">下载</button>
+                  </div>
+                </div>
+              </div>`;
+          })
+          .join("");
+      }
+
+      function applyPreviewFilters() {
+        previewCanvas.style.setProperty("--brightness", String(state.filters.brightness / 100));
+        previewCanvas.style.setProperty("--contrast", String(state.filters.contrast / 100));
+        previewCanvas.style.setProperty("--atmosphere", String(state.filters.atmosphere / 100));
+        previewCanvas.style.setProperty("--focus-x", `${50 + state.filters.motion / 4}%`);
+        previewCanvas.style.setProperty("--focus-y", `${50 - state.filters.motion / 6}%`);
+        previewCanvas.style.setProperty("--duration", `${Math.max(3, 8 - state.speed)}s`);
+        previewCanvas.style.boxShadow = `inset 0 0 ${Math.round(state.filters.sharpness / 3)}px rgba(255,255,255,0.14)`;
+      }
+
+      function renderSliders() {
+        sliderFields.forEach(([field, sliderId, valueId]) => {
+          const value = state.filters[field];
+          document.getElementById(sliderId).value = value;
+          document.getElementById(valueId).textContent = `${value}%`;
+        });
+        document.getElementById("brightnessValue").textContent = `${state.filters.brightness}%`;
+        document.getElementById("contrastValue").textContent = `${state.filters.contrast}%`;
+        applyPreviewFilters();
+      }
+
+      function renderPreview() {
+        const current = getSelectedItem();
+        if (!current) {
+          previewMeta.textContent = "未选择结果";
+          previewStatus.textContent = state.generating ? "生成中" : "待机";
+          previewDuration.textContent = state.params.duration;
+          return;
+        }
+
+        previewMeta.textContent = current.prompt || "未填写提示词";
+        previewStatus.textContent = current.status === "generating" ? "生成中" : "可预览";
+        previewDuration.textContent = current.params.duration;
+        previewBadge.textContent = `阿里 Wanx · ${current.mode === "image" ? "图生视频" : "文生视频"}`;
+      }
+
+      function renderAll() {
+        promptInput.value = state.prompt;
+        renderChipGroup("ratioGroup", "ratio", optionMap.ratio);
+        renderChipGroup("durationGroup", "duration", optionMap.duration);
+        renderChipGroup("cameraGroup", "camera", optionMap.camera);
+        renderChipGroup("styleGroup", "style", optionMap.style);
+        renderChipGroup("speedGroup", "speed", optionMap.speed);
+        renderUploads();
+        renderHistory();
+        renderResults();
+        renderSliders();
+        renderPreview();
+        generateSpinner.classList.toggle("hidden", !state.generating);
+        generateLabel.textContent = state.generating ? "生成中" : "生成";
+        generateButton.disabled = state.generating;
+      }
+
+      function syncProgress(itemId) {
+        let progress = 0;
+        const timer = setInterval(() => {
+          progress += 6;
+          state.previewProgress = Math.min(progress, 100);
+          timelineFill.style.width = `${state.previewProgress}%`;
+          const item = state.history.find((entry) => entry.id === itemId);
+          if (item && item.status === "generating" && progress >= 100) {
+            item.status = "done";
+            clearInterval(timer);
+            state.generating = false;
+            saveHistory();
+            renderAll();
+          }
+        }, 120);
+      }
+
+      function generateItem(seed) {
+        const prompt = state.prompt.trim();
+        if (!prompt) {
+          window.alert("请输入视频描述后再生成。");
+          return;
+        }
+        if (state.mode === "image" && !state.uploads.length) {
+          window.alert("图生视频模式下请先上传图片。");
+          return;
+        }
+
+        state.generating = true;
+        state.previewProgress = 0;
+        timelineFill.style.width = "0%";
+
+        const item = {
+          id: uid(),
+          title: `视频结果 ${String(state.history.length + 1).padStart(2, "0")}`,
+          prompt,
+          mode: state.mode,
+          status: "generating",
+          createdAt: new Date().toLocaleString(),
+          params: { ...state.params },
+          uploadCount: state.uploads.length,
+          seed: seed || uid(),
+        };
+
+        state.history.unshift(item);
+        state.selectedId = item.id;
+        saveHistory();
+        renderAll();
+
+        setTimeout(() => {
+          syncProgress(item.id);
+        }, 280);
+      }
+
+      function regenerateFrom(id) {
+        const item = state.history.find((entry) => entry.id === id);
+        if (!item) return;
+        state.prompt = item.prompt;
+        state.params = { ...item.params };
+        state.mode = item.mode;
+        setMode(item.mode);
+        generateItem(item.seed);
+      }
+
+      function removeItem(id) {
+        state.history = state.history.filter((item) => item.id !== id);
+        if (state.selectedId === id) {
+          state.selectedId = state.history[0] ? state.history[0].id : "";
+        }
+        saveHistory();
+        renderAll();
+      }
+
+      function clearHistory() {
+        state.history = [];
+        state.selectedId = "";
+        saveHistory();
+        renderAll();
+      }
+
+      function selectItem(id) {
+        state.selectedId = id;
+        state.previewProgress = 100;
+        timelineFill.style.width = "100%";
+        renderAll();
+      }
+
+      function downloadItem(id) {
+        const item = state.history.find((entry) => entry.id === id);
+        if (!item) return;
+
+        const svg = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+            <defs>
+              <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+                <stop offset="0%" stop-color="#0b1221"/>
+                <stop offset="55%" stop-color="#1c3568"/>
+                <stop offset="100%" stop-color="#0e1527"/>
+              </linearGradient>
+            </defs>
+            <rect width="1280" height="720" fill="url(#g)" rx="32"/>
+            <circle cx="360" cy="220" r="180" fill="rgba(122,178,255,0.18)"/>
+            <text x="72" y="110" fill="#edf4ff" font-size="42" font-family="PingFang SC, Microsoft YaHei, sans-serif">${escapeHtml(item.title)}</text>
+            <text x="72" y="176" fill="#c8dafd" font-size="26" font-family="PingFang SC, Microsoft YaHei, sans-serif">${escapeHtml(item.prompt)}</text>
+            <text x="72" y="244" fill="#8ea3c9" font-size="24" font-family="PingFang SC, Microsoft YaHei, sans-serif">${item.params.ratio} · ${item.params.duration} · ${item.params.camera} · ${item.params.style}</text>
+            <text x="72" y="618" fill="#7ab2ff" font-size="24" font-family="PingFang SC, Microsoft YaHei, sans-serif">阿里 Wanx · ${item.mode === "image" ? "图生视频" : "文生视频"}</text>
+          </svg>`;
+
+        const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = `${item.title}.svg`;
+        anchor.click();
+        URL.revokeObjectURL(url);
+      }
+
+      function readFiles(fileList) {
+        const currentCount = state.uploads.length;
+        const remaining = maxImages - currentCount;
+        const files = Array.from(fileList).slice(0, remaining);
+        if (!files.length) return;
+
+        files.forEach((file) => {
+          const reader = new FileReader();
+          const next = {
+            id: uid(),
+            name: file.name,
+            progress: 0,
+            url: "",
+          };
+          state.uploads.push(next);
+          renderUploads();
+
+          let progress = 0;
+          const timer = setInterval(() => {
+            progress += 10;
+            next.progress = Math.min(progress, 100);
+            renderUploads();
+            if (progress >= 100) {
+              clearInterval(timer);
+            }
+          }, 90);
+
+          reader.onload = () => {
+            next.url = String(reader.result || "");
+            renderUploads();
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+
+      document.querySelectorAll("[data-mode]").forEach((button) => {
+        button.addEventListener("click", () => {
+          setMode(button.dataset.mode);
+          renderAll();
+        });
+      });
+
+      document.addEventListener("click", (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+
+        const field = target.dataset.field;
+        const value = target.dataset.value;
+        if (field && value) {
+          if (field === "speed") {
+            state.speed = Number(value);
+          } else {
+            state.params[field] = value;
+          }
+          renderAll();
+          return;
+        }
+
+        const historyId = target.closest("[data-history-id]")?.dataset.historyId;
+        if (historyId && !target.dataset.deleteId && !target.dataset.regenerateId && !target.dataset.downloadId) {
+          selectItem(historyId);
+          return;
+        }
+
+        if (target.dataset.deleteId) {
+          removeItem(target.dataset.deleteId);
+          return;
+        }
+
+        if (target.dataset.regenerateId) {
+          regenerateFrom(target.dataset.regenerateId);
+          return;
+        }
+
+        if (target.dataset.downloadId) {
+          downloadItem(target.dataset.downloadId);
+        }
+      });
+
+      promptInput.addEventListener("input", (event) => {
+        state.prompt = event.target.value;
+      });
+
+      generateButton.addEventListener("click", () => {
+        generateItem();
+      });
+
+      clearHistoryButton.addEventListener("click", clearHistory);
+      uploadButton.addEventListener("click", () => fileInput.click());
+      fileInput.addEventListener("change", () => readFiles(fileInput.files || []));
+
+      dropzone.addEventListener("dragover", (event) => {
+        event.preventDefault();
+        dropzone.classList.add("dragging");
+      });
+      dropzone.addEventListener("dragleave", () => {
+        dropzone.classList.remove("dragging");
+      });
+      dropzone.addEventListener("drop", (event) => {
+        event.preventDefault();
+        dropzone.classList.remove("dragging");
+        readFiles(event.dataTransfer.files || []);
+      });
+
+      sliderFields.forEach(([field, sliderId, valueId]) => {
+        const slider = document.getElementById(sliderId);
+        const label = document.getElementById(valueId);
+        slider.addEventListener("input", () => {
+          state.filters[field] = Number(slider.value);
+          label.textContent = `${slider.value}%`;
+          applyPreviewFilters();
+        });
+      });
+
+      playToggle.addEventListener("click", () => {
+        state.isPlaying = !state.isPlaying;
+        playToggle.textContent = state.isPlaying ? "❚❚" : "▶";
+      });
+
+      deleteButton.addEventListener("click", () => {
+        if (state.selectedId) removeItem(state.selectedId);
+      });
+
+      regenerateButton.addEventListener("click", () => {
+        if (state.selectedId) regenerateFrom(state.selectedId);
+      });
+
+      downloadButton.addEventListener("click", () => {
+        if (state.selectedId) downloadItem(state.selectedId);
+      });
+
+      loadHistory();
+      setMode(state.mode);
+      renderAll();
+    </script>
+  </body>
+  </html>

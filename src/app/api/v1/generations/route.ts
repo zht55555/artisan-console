@@ -8,12 +8,16 @@ import {
 } from "@/services/generation";
 
 const createGenerationSchema = z.object({
-  type: z.enum(["text_to_image", "image_edit"]),
+  type: z.enum(["text_to_image", "image_edit", "text_to_video", "image_to_video"]),
   prompt: z.string().min(1).max(4000),
   negativePrompt: z.string().max(4000).optional(),
   style: z.string().max(120).optional(),
   size: z.string().max(40).optional(),
   sourceAssetId: z.string().max(120).optional(),
+  ratio: z.enum(["9:16", "16:9"]).optional(),
+  duration: z.enum(["5s", "10s"]).optional(),
+  camera: z.enum(["无", "环绕", "推拉", "缩放"]).optional(),
+  motionStrength: z.number().min(0).max(100).optional(),
 });
 
 function jsonError(status: number, message: string) {
@@ -49,7 +53,7 @@ export async function POST(request: Request) {
     return jsonError(503, "database_not_configured");
   }
 
-  let task: { taskId: string; status: "queued" | "succeeded" };
+  let task: { taskId: string; status: "queued" | "running" | "succeeded" };
   try {
     task = await createGenerationTask(db, userId, parsed.data);
   } catch (error) {

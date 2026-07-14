@@ -96,6 +96,30 @@ export const imageAssets = pgTable(
   ],
 );
 
+export const videoAssets = pgTable(
+  "video_assets",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull(),
+    taskId: text("task_id").notNull(),
+    coverImageAssetId: text("cover_image_asset_id"),
+    url: text("url").notNull(),
+    coverUrl: text("cover_url"),
+    mimeType: text("mime_type"),
+    durationSeconds: integer("duration_seconds"),
+    ratio: text("ratio"),
+    promptSnapshot: text("prompt_snapshot"),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("idx_video_assets_user_created_at").on(t.userId, t.createdAt),
+    index("idx_video_assets_task_id").on(t.taskId),
+  ],
+);
+
 export const promptTemplates = pgTable(
   "prompt_templates",
   {

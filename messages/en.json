@@ -1,6 +1,7 @@
 {
   "nav": {
     "chat": "Chat",
+    "video": "Video",
     "templates": "Templates",
     "debug": "Debug",
     "toggleTheme": "Toggle theme",

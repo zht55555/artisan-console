@@ -1,15 +1,30 @@
 import { and, eq } from "drizzle-orm";
-import { imageAssets, generationTasks } from "@/db/schema";
+import { imageAssets, generationTasks, videoAssets } from "@/db/schema";
 import { getDb } from "@/db";
 import { generateImageWithBailian } from "@/ai/bailian-image";
+import { submitVideoTaskWithBailian } from "@/ai/bailian-video";
+
+const allowedVideoStyles = ["电影感", "写实", "动漫", "赛博朋克"] as const;
+type VideoStyle = (typeof allowedVideoStyles)[number];
+
+function toVideoStyle(value: string | undefined): VideoStyle | undefined {
+  if (!value) return undefined;
+  return allowedVideoStyles.includes(value as VideoStyle)
+    ? (value as VideoStyle)
+    : undefined;
+}
 
 export type GenerationInput = {
-  type: "text_to_image" | "image_edit";
+  type: "text_to_image" | "image_edit" | "text_to_video" | "image_to_video";
   prompt: string;
   negativePrompt?: string;
   style?: string;
   size?: string;
   sourceAssetId?: string;
+  ratio?: "9:16" | "16:9";
+  duration?: "5s" | "10s";
+  camera?: "无" | "环绕" | "推拉" | "缩放";
+  motionStrength?: number;
 };
 
 export class GenerationServiceError extends Error {
@@ -37,7 +52,18 @@ export async function createGenerationTask(
     );
   }
 
-  if (input.type === "text_to_image" && input.sourceAssetId) {
+  if (input.type === "image_to_video" && !input.sourceAssetId) {
+    throw new GenerationServiceError(
+      "source_asset_required",
+      400,
+      "sourceAssetId is required for image_to_video",
+    );
+  }
+
+  if (
+    (input.type === "text_to_image" || input.type === "text_to_video") &&
+    input.sourceAssetId
+  ) {
     throw new GenerationServiceError(
       "invalid_source_asset",
       400,
@@ -80,6 +106,10 @@ export async function createGenerationTask(
       style: input.style,
       size: input.size,
       sourceAssetId: input.sourceAssetId,
+      ratio: input.ratio,
+      duration: input.duration,
+      camera: input.camera,
+      motionStrength: input.motionStrength,
     },
     createdAt: now,
     updatedAt: now,
@@ -153,6 +183,95 @@ export async function createGenerationTask(
       throw new GenerationServiceError("image_generation_failed", 502, message);
     }
   }
+
+  if (input.type === "text_to_video" || input.type === "image_to_video") {
+    try {
+      let sourceImageUrl: string | undefined;
+      if (input.sourceAssetId) {
+        const [source] = await db
+          .select({ url: imageAssets.url })
+          .from(imageAssets)
+          .where(
+            and(
+              eq(imageAssets.id, input.sourceAssetId),
+              eq(imageAssets.userId, userId),
+            ),
+          )
+          .limit(1);
+
+        if (!source?.url) {
+          throw new GenerationServiceError(
+            "source_asset_not_found",
+            404,
+            "source asset not found",
+          );
+        }
+        sourceImageUrl = source.url;
+      }
+
+      const submitted = await submitVideoTaskWithBailian({
+        type: input.type,
+        prompt: input.prompt,
+        style: toVideoStyle(input.style),
+        ratio: input.ratio,
+        duration: input.duration,
+        camera: input.camera,
+        motionStrength: input.motionStrength,
+        sourceImageUrl,
+      });
+
+      await db
+        .update(generationTasks)
+        .set({
+          status: "running",
+          updatedAt: new Date(),
+          params: {
+            style: input.style,
+            size: input.size,
+            sourceAssetId: input.sourceAssetId,
+            ratio: input.ratio,
+            duration: input.duration,
+            camera: input.camera,
+            motionStrength: input.motionStrength,
+            provider: "bailian",
+            providerTaskId: submitted.providerTaskId,
+            providerRaw: submitted.raw,
+          },
+        })
+        .where(
+          and(
+            eq(generationTasks.id, taskId),
+            eq(generationTasks.userId, userId),
+          ),
+        );
+
+      return {
+        taskId,
+        status: "running" as const,
+      };
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "video_generation_failed";
+
+      await db
+        .update(generationTasks)
+        .set({
+          status: "failed",
+          errorMessage: message,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(generationTasks.id, taskId),
+            eq(generationTasks.userId, userId),
+          ),
+        );
+
+      throw new GenerationServiceError("video_generation_failed", 502, message);
+    }
+  }
+
+  void videoAssets;
 
   return {
     taskId,

@@ -26,7 +26,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const type = url.searchParams.get("type") ?? "all";
 
-  const [chatItems, imageItems, editItems] = await Promise.all([
+  const [chatItems, imageItems, editItems, videoItems] = await Promise.all([
     db
       .select({
         id: conversations.id,
@@ -74,6 +74,24 @@ export async function GET(request: Request) {
       )
       .orderBy(desc(generationTasks.updatedAt))
       .limit(50),
+
+    db
+      .select({
+        id: generationTasks.id,
+        prompt: generationTasks.prompt,
+        status: generationTasks.status,
+        createdAt: generationTasks.createdAt,
+        updatedAt: generationTasks.updatedAt,
+      })
+      .from(generationTasks)
+      .where(
+        and(
+          eq(generationTasks.userId, userId),
+          eq(generationTasks.type, "text_to_video"),
+        ),
+      )
+      .orderBy(desc(generationTasks.updatedAt))
+      .limit(50),
   ]);
 
   const items = [
@@ -95,6 +113,14 @@ export async function GET(request: Request) {
     })),
     ...editItems.map((item) => ({
       type: "edit" as const,
+      id: item.id,
+      title: item.prompt,
+      status: item.status,
+      updatedAt: item.updatedAt,
+      createdAt: item.createdAt,
+    })),
+    ...videoItems.map((item) => ({
+      type: "video" as const,
       id: item.id,
       title: item.prompt,
       status: item.status,

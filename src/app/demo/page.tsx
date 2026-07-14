@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Play, MessageSquare, Image as ImageIcon, Wand2 } from "lucide-react";
 import { fetchWithRetry } from "@/lib/retry";
 
@@ -139,6 +140,29 @@ export default function DemoPage() {
         </div>
 
         <div className="rounded-2xl border border-border bg-card/80 p-5 backdrop-blur-sm">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-sm font-semibold">附加演示页面</div>
+              <div className="mt-1 text-sm text-muted-foreground">
+                新增了视频工作台页面，不影响当前 demo 链路。
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                href="/video"
+                className="inline-flex items-center rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-muted"
+              >
+                打开站内视频页
+              </Link>
+              <Link
+                href="/copilot-video-studio.html"
+                className="inline-flex items-center rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-muted"
+              >
+                打开静态原型页
+              </Link>
+            </div>
+          </div>
+
           <button
             onClick={runDemo}
             disabled={loading}
