@@ -30,6 +30,7 @@ const schema = z.object({
   style: z.string().trim().max(32).optional(),
   motionStrength: z.number().min(0).max(100).optional(),
   sourceImageUrl: z.string().max(2000000).optional(),
+  fidelityMode: z.enum(["preserve", "creative"]).optional(),
 });
 
 function jsonError(status: number, message: string) {
@@ -71,6 +72,7 @@ export async function POST(request: Request) {
       style,
       motionStrength: input.motionStrength,
       sourceImageUrl: input.sourceImageUrl,
+      fidelityMode: input.fidelityMode,
     });
 
     const taskId = `video_${crypto.randomUUID()}`;
@@ -84,11 +86,12 @@ export async function POST(request: Request) {
       providerTaskId: submitted.providerTaskId,
       status: "running",
       ratio: input.ratio,
-      duration: input.duration,
+      duration: input.duration === "10s" ? "10s" : "5s",
       camera,
       style,
       motionStrength: input.motionStrength,
       sourceImageUrl: input.sourceImageUrl,
+      fidelityMode: input.fidelityMode,
       createdAt: now,
       updatedAt: now,
     });

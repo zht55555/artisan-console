@@ -45,9 +45,18 @@
       "useLastChat": "Use last chat as prompt",
       "enterEdit": "Edit"
     },
+    "imagePanel": {
+      "ratio": "Aspect ratio",
+      "resolution": "Resolution",
+      "quality2k": "HD 2K",
+      "quality4k": "Ultra 4K",
+      "width": "W",
+      "height": "H"
+    },
     "message": {
       "canceled": "Canceled",
       "retry": "Retry",
+      "defaultImageContext": "current image",
       "generatedImage": "Generated image: {prompt}",
       "generatedImageEmpty": "Image generated",
       "optimizePrompt": "Based on \"{ctx}\", provide 3 actionable detail enhancement suggestions with their best use cases.",

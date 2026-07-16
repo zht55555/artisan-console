@@ -7,6 +7,7 @@ type Ratio = "9:16" | "16:9";
 type Duration = "5s" | "10s";
 type Camera = "无" | "环绕" | "推拉" | "缩放";
 type Style = "电影感" | "写实" | "动漫" | "赛博朋克";
+type FidelityMode = "preserve" | "creative";
 
 type UploadAsset = {
   id: string;
@@ -49,15 +50,21 @@ function uid() {
 
 export default function VideoPage() {
   const [mode, setMode] = useState<VideoMode>("text_to_video");
-  const [prompt, setPrompt] = useState("深夜雨巷里，镜头从霓虹倒影推近，人物回头凝视镜头。");
+  const [prompt, setPrompt] = useState(
+    "深夜雨巷里，镜头从霓虹倒影推近，人物回头凝视镜头。",
+  );
   const [ratio, setRatio] = useState<Ratio>("9:16");
   const [duration, setDuration] = useState<Duration>("5s");
   const [camera, setCamera] = useState<Camera>("无");
   const [style, setStyle] = useState<Style>("电影感");
-  const [motionStrength, setMotionStrength] = useState(35);
+  const [motionStrength, setMotionStrength] = useState(18);
+  const [fidelityMode, setFidelityMode] = useState<FidelityMode>("preserve");
 
   const [uploads, setUploads] = useState<UploadAsset[]>([]);
-  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+  const [selectedUploadId, setSelectedUploadId] = useState<string>("");
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>(
+    {},
+  );
 
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [selectedTaskId, setSelectedTaskId] = useState<string>("");
@@ -145,7 +152,12 @@ export default function VideoPage() {
 
     setIsGenerating(true);
     setTaskError("");
-    const sourceImageUrl = mode === "image_to_video" ? uploads[0]?.url : undefined;
+    const selectedUpload =
+      mode === "image_to_video"
+        ? uploads.find((item) => item.id === selectedUploadId) || uploads[0]
+        : undefined;
+    const sourceImageUrl =
+      mode === "image_to_video" ? selectedUpload?.url : undefined;
 
     const payload = {
       mode,
@@ -156,6 +168,7 @@ export default function VideoPage() {
       camera,
       motionStrength,
       sourceImageUrl,
+      fidelityMode,
     };
 
     const res = await fetch("/api/v1/video/generate", {
@@ -198,7 +211,10 @@ export default function VideoPage() {
   }
 
   async function uploadFiles(fileList: FileList | File[]) {
-    const files = Array.from(fileList).slice(0, Math.max(0, 9 - uploads.length));
+    const files = Array.from(fileList).slice(
+      0,
+      Math.max(0, 9 - uploads.length),
+    );
     for (const file of files) {
       const key = uid();
       setUploadProgress((prev) => ({ ...prev, [key]: 8 }));
@@ -213,16 +229,18 @@ export default function VideoPage() {
       await new Promise<void>((resolve) => {
         const reader = new FileReader();
         reader.onload = () => {
+          const assetId = `local_${uid()}`;
           window.clearInterval(fakeTimer);
           setUploadProgress((prev) => ({ ...prev, [key]: 100 }));
           setUploads((prev) => [
             ...prev,
             {
-              id: `local_${uid()}`,
+              id: assetId,
               url: String(reader.result || ""),
               mimeType: file.type,
             },
           ]);
+          setSelectedUploadId((prev) => prev || assetId);
           resolve();
         };
         reader.onerror = () => {
@@ -238,7 +256,9 @@ export default function VideoPage() {
 
   async function deleteTask(taskId: string) {
     if (!taskId) return;
-    const res = await fetch(`/api/v1/video/tasks/${taskId}/delete`, { method: "POST" });
+    const res = await fetch(`/api/v1/video/tasks/${taskId}/delete`, {
+      method: "POST",
+    });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
       window.alert(`删除失败: ${data?.error || res.status}`);
@@ -306,7 +326,11 @@ export default function VideoPage() {
 
   useEffect(() => {
     const status = detail?.task?.status;
-    if (status === "succeeded" || status === "failed" || status === "canceled") {
+    if (
+      status === "succeeded" ||
+      status === "failed" ||
+      status === "canceled"
+    ) {
       setIsGenerating(false);
       clearPoll();
     }
@@ -316,6 +340,17 @@ export default function VideoPage() {
     if (!previewVideoRef.current) return;
     previewVideoRef.current.playbackRate = previewSpeed;
   }, [previewSpeed, selectedVideoUrl]);
+
+  useEffect(() => {
+    if (mode !== "image_to_video") return;
+    if (
+      selectedUploadId &&
+      uploads.some((item) => item.id === selectedUploadId)
+    ) {
+      return;
+    }
+    setSelectedUploadId(uploads[0]?.id || "");
+  }, [mode, selectedUploadId, uploads]);
 
   const inputCardClass =
     "rounded-2xl border border-[rgba(122,162,255,0.16)] bg-[rgba(16,24,42,0.85)] p-4";
@@ -338,7 +373,9 @@ export default function VideoPage() {
               onClick={() => setMode("text_to_video")}
             >
               <div className="font-medium">文生视频</div>
-              <div className="text-xs text-[#8ea3c9]">多行中文输入，直接生成</div>
+              <div className="text-xs text-[#8ea3c9]">
+                多行中文输入，直接生成
+              </div>
             </button>
             <button
               className={`${chipClass} text-left ${mode === "image_to_video" ? "border-[rgba(122,162,255,0.55)] bg-[rgba(79,140,255,0.15)]" : ""}`}
@@ -377,10 +414,16 @@ export default function VideoPage() {
                 }`}
                 onClick={() => setSelectedTaskId(item.id)}
               >
-                <div className="line-clamp-2 text-sm font-medium">{item.prompt}</div>
-                <div className="mt-1 text-xs text-[#8ea3c9]">状态: {item.status}</div>
+                <div className="line-clamp-2 text-sm font-medium">
+                  {item.prompt}
+                </div>
+                <div className="mt-1 text-xs text-[#8ea3c9]">
+                  状态: {item.status}
+                </div>
                 <div className="mt-2 flex items-center justify-between">
-                  <div className="text-[11px] text-[#8ea3c9]">{new Date(item.updatedAt).toLocaleString()}</div>
+                  <div className="text-[11px] text-[#8ea3c9]">
+                    {new Date(item.updatedAt).toLocaleString()}
+                  </div>
                   <button
                     className="text-xs text-[#ff8ca4] hover:text-[#ffb6c7]"
                     onClick={(e) => {
@@ -401,8 +444,12 @@ export default function VideoPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h1 className="text-2xl font-semibold">视频生成工作台</h1>
-                <p className="mt-1 text-sm text-[#8ea3c9]">暗黑蓝色布局，接入阿里视频任务，支持文生视频和图生视频</p>
-                <p className="mt-1 text-xs text-[#7fa0d7]">提示：视频任务通常需要 1-5 分钟，状态为 running 时请耐心等待。</p>
+                <p className="mt-1 text-sm text-[#8ea3c9]">
+                  暗黑蓝色布局，接入阿里视频任务，支持文生视频和图生视频
+                </p>
+                <p className="mt-1 text-xs text-[#7fa0d7]">
+                  提示：视频任务通常需要 1-5 分钟，状态为 running 时请耐心等待。
+                </p>
               </div>
               <button
                 className="inline-flex min-w-[120px] items-center justify-center gap-2 rounded-xl bg-[linear-gradient(135deg,#4787ff_0%,#62a5ff_100%)] px-5 py-3 text-sm font-semibold text-white shadow-[0_16px_36px_rgba(71,135,255,0.35)] disabled:cursor-wait disabled:opacity-70"
@@ -438,8 +485,12 @@ export default function VideoPage() {
                 }}
               >
                 <span className="text-sm">拖拽上传图片</span>
-                <span className="mt-1 text-xs text-[#8ea3c9]">最多 9 张，支持缩略图预览与上传进度</span>
-                <span className="mt-3 rounded-xl border border-[rgba(122,162,255,0.24)] px-3 py-2 text-xs">上传图片</span>
+                <span className="mt-1 text-xs text-[#8ea3c9]">
+                  最多 9 张，支持缩略图预览与上传进度
+                </span>
+                <span className="mt-3 rounded-xl border border-[rgba(122,162,255,0.24)] px-3 py-2 text-xs">
+                  上传图片
+                </span>
                 <input
                   className="hidden"
                   type="file"
@@ -453,19 +504,44 @@ export default function VideoPage() {
 
               <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-3">
                 {uploads.map((item, idx) => (
-                  <div key={item.id} className="overflow-hidden rounded-xl border border-[rgba(122,162,255,0.18)] bg-[rgba(255,255,255,0.03)]">
-                    <img src={item.url} alt={`upload-${idx}`} className="h-24 w-full object-cover" />
-                    <div className="p-2 text-xs text-[#8ea3c9]">上传完成</div>
+                  <div
+                    key={item.id}
+                    className="overflow-hidden rounded-xl border border-[rgba(122,162,255,0.18)] bg-[rgba(255,255,255,0.03)]"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setSelectedUploadId(item.id)}
+                      className={`w-full text-left ${selectedUploadId === item.id ? "ring-2 ring-[rgba(122,162,255,0.65)]" : ""}`}
+                    >
+                      <img
+                        src={item.url}
+                        alt={`upload-${idx}`}
+                        className="h-24 w-full object-cover"
+                      />
+                      <div className="p-2 text-xs text-[#8ea3c9]">
+                        {selectedUploadId === item.id
+                          ? "已选为源图"
+                          : "上传完成（点击设为源图）"}
+                      </div>
+                    </button>
                   </div>
                 ))}
                 {Object.entries(uploadProgress)
                   .filter((entry) => entry[1] > 0 && entry[1] < 100)
                   .map(([id, value]) => (
-                    <div key={id} className="rounded-xl border border-[rgba(122,162,255,0.18)] bg-[rgba(255,255,255,0.03)] p-2">
+                    <div
+                      key={id}
+                      className="rounded-xl border border-[rgba(122,162,255,0.18)] bg-[rgba(255,255,255,0.03)] p-2"
+                    >
                       <div className="h-2 w-full overflow-hidden rounded-full bg-[rgba(255,255,255,0.15)]">
-                        <div className="h-full bg-[linear-gradient(90deg,#4f8cff,#7ab2ff)]" style={{ width: `${value}%` }} />
+                        <div
+                          className="h-full bg-[linear-gradient(90deg,#4f8cff,#7ab2ff)]"
+                          style={{ width: `${value}%` }}
+                        />
                       </div>
-                      <div className="mt-1 text-[11px] text-[#8ea3c9]">上传中 {value}%</div>
+                      <div className="mt-1 text-[11px] text-[#8ea3c9]">
+                        上传中 {value}%
+                      </div>
                     </div>
                   ))}
               </div>
@@ -475,30 +551,84 @@ export default function VideoPage() {
           <div className={`${inputCardClass} mt-4`}>
             <div className="mb-3 text-sm font-semibold">参数面板</div>
             <div className="grid gap-3 md:grid-cols-2">
-              <ParamChips label="比例" options={["9:16", "16:9"]} value={ratio} onChange={(v) => setRatio(v as Ratio)} />
-              <ParamChips label="时长" options={["5s", "10s"]} value={duration} onChange={(v) => setDuration(v as Duration)} />
-              <ParamChips label="运镜" options={["无", "环绕", "推拉", "缩放"]} value={camera} onChange={(v) => setCamera(v as Camera)} />
-              <ParamChips label="风格" options={["电影感", "写实", "动漫", "赛博朋克"]} value={style} onChange={(v) => setStyle(v as Style)} />
+              {mode === "image_to_video" && (
+                <ParamChips
+                  label="保真模式"
+                  options={["保真优先", "创意优先"]}
+                  value={fidelityMode === "preserve" ? "保真优先" : "创意优先"}
+                  onChange={(v) =>
+                    setFidelityMode(v === "创意优先" ? "creative" : "preserve")
+                  }
+                />
+              )}
+              <ParamChips
+                label="比例"
+                options={["9:16", "16:9"]}
+                value={ratio}
+                onChange={(v) => setRatio(v as Ratio)}
+              />
+              <ParamChips
+                label="时长"
+                options={["5s", "10s"]}
+                value={duration}
+                onChange={(v) => setDuration(v as Duration)}
+              />
+              <ParamChips
+                label="运镜"
+                options={["无", "环绕", "推拉", "缩放"]}
+                value={camera}
+                onChange={(v) => setCamera(v as Camera)}
+              />
+              <ParamChips
+                label="风格"
+                options={["电影感", "写实", "动漫", "赛博朋克"]}
+                value={style}
+                onChange={(v) => setStyle(v as Style)}
+              />
             </div>
           </div>
 
           <div className={`${inputCardClass} mt-4`}>
             <div className="mb-2 text-sm font-semibold">结果卡片</div>
-            {!detail && <div className="text-xs text-[#8ea3c9]">暂无结果，点击“生成”后显示。</div>}
+            {!detail && (
+              <div className="text-xs text-[#8ea3c9]">
+                暂无结果，点击“生成”后显示。
+              </div>
+            )}
             {detail && (
               <div className="overflow-hidden rounded-2xl border border-[rgba(122,162,255,0.2)] bg-[rgba(255,255,255,0.03)]">
                 <div className="h-44 w-full bg-[linear-gradient(145deg,#0d1730,#1c3360,#0b1326)]">
                   {selectedCoverUrl ? (
-                    <img src={selectedCoverUrl} alt="cover" className="h-full w-full object-cover" />
+                    <img
+                      src={selectedCoverUrl}
+                      alt="cover"
+                      className="h-full w-full object-cover"
+                    />
                   ) : null}
                 </div>
                 <div className="p-3">
-                  <div className="line-clamp-2 text-sm">{detail.task.prompt}</div>
-                  <div className="mt-1 text-xs text-[#8ea3c9]">时长: {String(detail.task.duration || duration)}</div>
+                  <div className="line-clamp-2 text-sm">
+                    {detail.task.prompt}
+                  </div>
+                  <div className="mt-1 text-xs text-[#8ea3c9]">
+                    时长: {String(detail.task.duration || duration)}
+                  </div>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <button className={chipClass} onClick={() => void deleteTask(detail.task.id)}>删除</button>
-                    <button className={chipClass} onClick={() => void createTask(detail.task.prompt)}>重生成</button>
-                    <button className={chipClass} onClick={downloadVideo}>下载</button>
+                    <button
+                      className={chipClass}
+                      onClick={() => void deleteTask(detail.task.id)}
+                    >
+                      删除
+                    </button>
+                    <button
+                      className={chipClass}
+                      onClick={() => void createTask(detail.task.prompt)}
+                    >
+                      重生成
+                    </button>
+                    <button className={chipClass} onClick={downloadVideo}>
+                      下载
+                    </button>
                   </div>
                 </div>
               </div>
@@ -508,7 +638,11 @@ export default function VideoPage() {
 
         <aside className="rounded-3xl border border-[rgba(122,162,255,0.14)] bg-[rgba(12,19,34,0.88)] p-4">
           <div className="text-sm font-semibold">预览</div>
-          <div className="mt-1 text-xs text-[#8ea3c9]">{detail?.task?.status ? `状态: ${detail.task.status}` : "未选择结果"}</div>
+          <div className="mt-1 text-xs text-[#8ea3c9]">
+            {detail?.task?.status
+              ? `状态: ${detail.task.status}`
+              : "未选择结果"}
+          </div>
           {!!taskError && (
             <div className="mt-2 rounded-xl border border-[rgba(255,111,143,0.45)] bg-[rgba(255,111,143,0.08)] p-2 text-xs text-[#ff9ab2]">
               错误: {taskError}
@@ -529,7 +663,9 @@ export default function VideoPage() {
                 }}
               />
             ) : (
-              <div className="flex h-[320px] items-center justify-center rounded-2xl text-sm text-[#8ea3c9]">暂无可预览视频</div>
+              <div className="flex h-[320px] items-center justify-center rounded-2xl text-sm text-[#8ea3c9]">
+                暂无可预览视频
+              </div>
             )}
           </div>
 
@@ -553,8 +689,16 @@ export default function VideoPage() {
             <Slider label="亮度" value={brightness} onChange={setBrightness} />
             <Slider label="对比度" value={contrast} onChange={setContrast} />
             <Slider label="锐度" value={sharpness} onChange={setSharpness} />
-            <Slider label="氛围浓度" value={atmosphere} onChange={setAtmosphere} />
-            <Slider label="运镜幅度" value={motionStrength} onChange={setMotionStrength} />
+            <Slider
+              label="氛围浓度"
+              value={atmosphere}
+              onChange={setAtmosphere}
+            />
+            <Slider
+              label="运镜幅度"
+              value={motionStrength}
+              onChange={setMotionStrength}
+            />
           </div>
         </aside>
       </div>

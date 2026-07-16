@@ -64,10 +64,7 @@ export async function GET(
             updatedAt: new Date(),
           })
           .where(
-            and(
-              eq(generationTasks.id, id),
-              eq(generationTasks.userId, userId),
-            ),
+            and(eq(generationTasks.id, id), eq(generationTasks.userId, userId)),
           );
       }
 
@@ -117,10 +114,7 @@ export async function GET(
           updatedAt: new Date(),
         })
         .where(
-          and(
-            eq(generationTasks.id, id),
-            eq(generationTasks.userId, userId),
-          ),
+          and(eq(generationTasks.id, id), eq(generationTasks.userId, userId)),
         );
     }
   }
@@ -136,10 +130,15 @@ export async function GET(
     .from(imageAssets)
     .where(and(eq(imageAssets.taskId, id), eq(imageAssets.userId, userId)));
 
-  const videos = await db
-    .select()
-    .from(videoAssets)
-    .where(and(eq(videoAssets.taskId, id), eq(videoAssets.userId, userId)));
+  const videos =
+    type === "text_to_video" || type === "image_to_video"
+      ? await db
+          .select()
+          .from(videoAssets)
+          .where(
+            and(eq(videoAssets.taskId, id), eq(videoAssets.userId, userId)),
+          )
+      : [];
 
   const sourceAssetId =
     task.type === "image_edit" &&

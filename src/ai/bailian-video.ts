@@ -10,6 +10,7 @@ type VideoGenerateInput = {
   style?: "电影感" | "写实" | "动漫" | "赛博朋克";
   motionStrength?: number;
   sourceImageUrl?: string;
+  fidelityMode?: "preserve" | "creative";
 };
 
 type DashscopePayload = {
@@ -47,7 +48,9 @@ export type BailianVideoQueryResult = {
 };
 
 function getDashscopeBaseUrl() {
-  return process.env.DASHSCOPE_BASE_URL?.trim() || "https://dashscope.aliyuncs.com";
+  return (
+    process.env.DASHSCOPE_BASE_URL?.trim() || "https://dashscope.aliyuncs.com"
+  );
 }
 
 function getDashscopeApiKey() {
@@ -69,7 +72,18 @@ function getVideoSubmitPath() {
   );
 }
 
-function toDurationSeconds(duration: VideoGenerateInput["duration"]): number | undefined {
+function shouldRetryWithoutDuration(message: string, hasDuration: boolean) {
+  if (!hasDuration) return false;
+  const text = message.toLowerCase();
+  return (
+    text.includes("duration customization is not supported") ||
+    (text.includes("duration") && text.includes("not supported"))
+  );
+}
+
+function toDurationSeconds(
+  duration: VideoGenerateInput["duration"],
+): number | undefined {
   if (!duration) return undefined;
   const parsed = Number(String(duration).replace("s", ""));
   if (!Number.isFinite(parsed) || parsed <= 0) return undefined;
@@ -82,6 +96,13 @@ function toProviderPrompt(input: VideoGenerateInput): string {
   if (input.camera) extras.push(`运镜:${input.camera}`);
   if (typeof input.motionStrength === "number") {
     extras.push(`运镜幅度:${input.motionStrength}`);
+  }
+  if (input.type === "image_to_video") {
+    const preserveHint =
+      input.fidelityMode !== "creative"
+        ? "严格保持源图主体身份特征、服装、发型、构图与场景，不改变人物脸部与衣着，仅做自然微动态和镜头运动。"
+        : "允许在保留主体核心身份的前提下做适度风格化。";
+    extras.push(preserveHint);
   }
   if (extras.length === 0) return input.prompt;
   return `${input.prompt}\n${extras.join("，")}`;
@@ -125,35 +146,55 @@ export async function submitVideoTaskWithBailian(
   const model = input.model || getVideoModel();
   const submitPath = getVideoSubmitPath();
 
-  const requestBody: Record<string, unknown> = {
-    model,
-    input: {
-      prompt: toProviderPrompt(input),
-      ...(input.sourceImageUrl ? { image_url: input.sourceImageUrl } : {}),
-    },
-    parameters: {
-      ...(input.ratio ? { ratio: input.ratio } : {}),
-      ...(toDurationSeconds(input.duration)
-        ? { duration: toDurationSeconds(input.duration) }
-        : {}),
-    },
+  const submitOnce = async (withDuration: boolean) => {
+    const requestBody: Record<string, unknown> = {
+      model,
+      input: {
+        prompt: toProviderPrompt(input),
+        ...(input.sourceImageUrl ? { image_url: input.sourceImageUrl } : {}),
+      },
+      parameters: {
+        ...(input.ratio ? { ratio: input.ratio } : {}),
+        ...(withDuration && toDurationSeconds(input.duration)
+          ? { duration: toDurationSeconds(input.duration) }
+          : {}),
+      },
+    };
+
+    const res = await fetchWithRetry(
+      `${baseUrl}${submitPath}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "X-DashScope-Async": "enable",
+        },
+        body: JSON.stringify(requestBody),
+      },
+      { retries: 3, retryUnsafeMethods: true },
+    );
+
+    const payload = (await res.json().catch(() => ({}))) as DashscopePayload;
+    return { res, payload };
   };
 
-  const res = await fetchWithRetry(
-    `${baseUrl}${submitPath}`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "X-DashScope-Async": "enable",
-      },
-      body: JSON.stringify(requestBody),
-    },
-    { retries: 3, retryUnsafeMethods: true },
-  );
+  const hasDuration = Boolean(toDurationSeconds(input.duration));
+  let { res, payload } = await submitOnce(true);
 
-  const payload = (await res.json().catch(() => ({}))) as DashscopePayload;
+  if (!res.ok) {
+    const firstMessage =
+      payload?.message ||
+      payload?.error?.message ||
+      `dashscope video submit failed: ${res.status}`;
+
+    if (shouldRetryWithoutDuration(firstMessage, hasDuration)) {
+      const retried = await submitOnce(false);
+      res = retried.res;
+      payload = retried.payload;
+    }
+  }
+
   if (!res.ok) {
     throw new Error(
       payload?.message ||
@@ -179,12 +220,15 @@ export async function queryVideoTaskWithBailian(
   const apiKey = getDashscopeApiKey();
   const baseUrl = getDashscopeBaseUrl();
 
-  const res = await fetchWithRetry(`${baseUrl}/api/v1/tasks/${providerTaskId}`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
+  const res = await fetchWithRetry(
+    `${baseUrl}/api/v1/tasks/${providerTaskId}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
     },
-  });
+  );
 
   const payload = (await res.json().catch(() => ({}))) as DashscopePayload;
   if (!res.ok) {
@@ -195,7 +239,9 @@ export async function queryVideoTaskWithBailian(
     );
   }
 
-  const status = mapStatus(payload?.output?.task_status || payload?.task_status || "QUEUED");
+  const status = mapStatus(
+    payload?.output?.task_status || payload?.task_status || "QUEUED",
+  );
 
   return {
     status,

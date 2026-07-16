@@ -14,6 +14,7 @@ export type VideoTaskRecord = {
   camera?: "无" | "环绕" | "推拉" | "缩放";
   style?: "电影感" | "写实" | "动漫" | "赛博朋克";
   motionStrength?: number;
+  fidelityMode?: "preserve" | "creative";
   sourceImageUrl?: string;
   videoUrl?: string;
   coverUrl?: string;

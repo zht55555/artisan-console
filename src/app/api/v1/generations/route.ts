@@ -8,7 +8,12 @@ import {
 } from "@/services/generation";
 
 const createGenerationSchema = z.object({
-  type: z.enum(["text_to_image", "image_edit", "text_to_video", "image_to_video"]),
+  type: z.enum([
+    "text_to_image",
+    "image_edit",
+    "text_to_video",
+    "image_to_video",
+  ]),
   prompt: z.string().min(1).max(4000),
   negativePrompt: z.string().max(4000).optional(),
   style: z.string().max(120).optional(),
@@ -58,7 +63,14 @@ export async function POST(request: Request) {
     task = await createGenerationTask(db, userId, parsed.data);
   } catch (error) {
     if (error instanceof GenerationServiceError) {
-      return jsonError(error.statusCode, error.code);
+      return NextResponse.json(
+        {
+          ok: false,
+          error: error.code,
+          detail: error.message,
+        },
+        { status: error.statusCode },
+      );
     }
     return jsonError(500, "create_task_failed");
   }

@@ -68,7 +68,7 @@ export default function ImageNewPage() {
         { retries: 3, retryUnsafeMethods: true },
       );
       const d = await r.json();
-      if (!r.ok) throw new Error(d?.error || t("submitFailed"));
+      if (!r.ok) throw new Error(d?.detail || d?.error || t("submitFailed"));
 
       setTaskId(d.taskId);
       setStatus(d.status);
@@ -83,12 +83,8 @@ export default function ImageNewPage() {
   return (
     <main className="min-h-screen bg-background text-foreground px-4 py-10">
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold tracking-tight">
-          {t("title")}
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {t("subtitle")}
-        </p>
+        <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
+        <p className="mt-2 text-sm text-muted-foreground">{t("subtitle")}</p>
 
         <div className="mt-6 rounded-2xl border border-border bg-card p-4 space-y-3">
           <textarea

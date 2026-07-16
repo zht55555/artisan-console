@@ -1,6 +1,13 @@
 "use client";
 
-import { useRef, useState, useEffect, useCallback, CSSProperties } from "react";
+import {
+  useRef,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  CSSProperties,
+} from "react";
 import Link from "next/link";
 import {
   Send,
@@ -31,12 +38,49 @@ type ChatMsg = {
 };
 type StreamState = "idle" | "sending" | "streaming";
 type FollowUpAction = "optimize" | "marketing" | "variants";
+type ImageQuality = "2k" | "4k";
 
 /* ────────────────────────────────────────
    Constants
    ──────────────────────────────────────── */
 const FEATURE_ICONS = [Zap, Play, Sparkles];
 const FEATURE_COLORS = ["text-yellow-500", "text-primary", "text-primary"];
+const IMAGE_RATIO_OPTIONS = [
+  "21:9",
+  "16:9",
+  "3:2",
+  "4:3",
+  "1:1",
+  "3:4",
+  "2:3",
+  "9:16",
+] as const;
+const IMAGE_QUALITY_LONG_EDGE: Record<ImageQuality, number> = {
+  "2k": 1792,
+  "4k": 2560,
+};
+
+function snapTo64(value: number): number {
+  return Math.max(512, Math.round(value / 64) * 64);
+}
+
+function calcSizeByRatio(ratio: string, longEdge: number) {
+  const [aStr, bStr] = ratio.split(":");
+  const a = Number(aStr) || 1;
+  const b = Number(bStr) || 1;
+
+  if (a >= b) {
+    return {
+      width: snapTo64(longEdge),
+      height: snapTo64((longEdge * b) / a),
+    };
+  }
+
+  return {
+    width: snapTo64((longEdge * a) / b),
+    height: snapTo64(longEdge),
+  };
+}
 
 /* ────────────────────────────────────────
    Meteors (VideoFly pattern)
@@ -227,11 +271,15 @@ export default function ChatPage() {
     label,
     color: FEATURE_COLORS[i],
   }));
-  const FOLLOW_UP_ACTIONS: Array<{ key: FollowUpAction; label: string }> = [
-    { key: "optimize", label: tChat("followUpOptimize") },
-    { key: "marketing", label: tChat("followUpMarketing") },
-    { key: "variants", label: tChat("followUpVariants") },
-  ];
+  const FOLLOW_UP_ACTIONS: Array<{ key: FollowUpAction; label: string }> =
+    useMemo(
+      () => [
+        { key: "optimize", label: tChat("followUpOptimize") },
+        { key: "marketing", label: tChat("followUpMarketing") },
+        { key: "variants", label: tChat("followUpVariants") },
+      ],
+      [tChat],
+    );
 
   /* pre-warm visitor session on mount */
   useEffect(() => {
@@ -253,7 +301,12 @@ export default function ChatPage() {
   const [imagePrompt, setImagePrompt] = useState(
     "一张现代科技风格的办公场景插画，明亮配色，4k",
   );
-  const [imageSize, setImageSize] = useState("1024x1024");
+  const [imageRatio, setImageRatio] =
+    useState<(typeof IMAGE_RATIO_OPTIONS)[number]>("16:9");
+  const [imageQuality, setImageQuality] = useState<ImageQuality>("2k");
+  const initialSize = calcSizeByRatio("16:9", IMAGE_QUALITY_LONG_EDGE["2k"]);
+  const [imageWidth, setImageWidth] = useState(initialSize.width);
+  const [imageHeight, setImageHeight] = useState(initialSize.height);
   const [imageStyle, setImageStyle] = useState("photography");
   const [imageTaskId, setImageTaskId] = useState("");
   const [imageStatus, setImageStatus] = useState("");
@@ -270,6 +323,7 @@ export default function ChatPage() {
   const chatMode = messages.length > 0;
   const busy = streamState !== "idle";
   const currentModel = MODELS.find((m) => m.id === model) ?? MODELS[0];
+  const imageSize = `${imageWidth}x${imageHeight}`;
   const latestUserText = [...messages]
     .reverse()
     .find((m) => m.role === "user" && m.content.trim())?.content;
@@ -281,6 +335,15 @@ export default function ChatPage() {
     ta.style.height = "auto";
     ta.style.height = Math.min(ta.scrollHeight, 180) + "px";
   }, [input, imagePrompt, composerMode]);
+
+  useEffect(() => {
+    const next = calcSizeByRatio(
+      imageRatio,
+      IMAGE_QUALITY_LONG_EDGE[imageQuality],
+    );
+    setImageWidth(next.width);
+    setImageHeight(next.height);
+  }, [imageRatio, imageQuality]);
 
   /* scroll to bottom */
   useEffect(() => {
@@ -333,7 +396,11 @@ export default function ChatPage() {
     setStreamState("sending");
 
     try {
-      const cid = await ensureConvId(convId, tChat("createSessionFailed"), tChat("newSession"));
+      const cid = await ensureConvId(
+        convId,
+        tChat("createSessionFailed"),
+        tChat("newSession"),
+      );
       setConvId(cid);
       const ctrl = new AbortController();
       abortRef.current = ctrl;
@@ -384,7 +451,8 @@ export default function ChatPage() {
           ),
         );
       } else {
-        const msg = err instanceof Error ? err.message : tChat("errors.unknown");
+        const msg =
+          err instanceof Error ? err.message : tChat("errors.unknown");
         setError(msg);
         setMessages((prev) =>
           prev.map((m) =>
@@ -402,7 +470,7 @@ export default function ChatPage() {
       setStreamState("idle");
       abortRef.current = null;
     }
-  }, [input, imgPreview, imgBase64, busy, convId, model]);
+  }, [input, imgPreview, imgBase64, busy, convId, model, tChat]);
 
   const handleAbort = useCallback(() => abortRef.current?.abort(), []);
   const handleRetry = useCallback(() => {
@@ -419,7 +487,7 @@ export default function ChatPage() {
 
   const handleFollowUpFromImage = useCallback(
     (action: FollowUpAction, hint?: string) => {
-      const imageContext = hint?.trim() || "当前图片";
+      const imageContext = hint?.trim() || tChat("message.defaultImageContext");
 
       const nextInput =
         action === "optimize"
@@ -431,7 +499,7 @@ export default function ChatPage() {
       setComposerMode("chat");
       setInput(nextInput);
     },
-    [],
+    [tChat],
   );
 
   const renderFollowUpActions = useCallback(
@@ -450,7 +518,7 @@ export default function ChatPage() {
         ))}
       </div>
     ),
-    [handleFollowUpFromImage],
+    [FOLLOW_UP_ACTIONS, handleFollowUpFromImage],
   );
 
   const pollImageTask = useCallback(
@@ -459,7 +527,9 @@ export default function ChatPage() {
         const res = await fetchWithRetry(`/api/v1/generations/${taskId}`);
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-          throw new Error(data?.error || tChat("errors.queryTaskFailed"));
+          throw new Error(
+            data?.detail || data?.error || tChat("errors.queryTaskFailed"),
+          );
         }
 
         const taskStatus = String(data?.task?.status || "");
@@ -479,8 +549,10 @@ export default function ChatPage() {
                 id: uid(),
                 role: "assistant",
                 content: imagePrompt.trim()
-                    ? tChat("message.generatedImage", { prompt: imagePrompt.trim() })
-                    : tChat("message.generatedImageEmpty"),
+                  ? tChat("message.generatedImage", {
+                      prompt: imagePrompt.trim(),
+                    })
+                  : tChat("message.generatedImageEmpty"),
                 image: firstAsset,
                 imageAssetId:
                   typeof firstAssetId === "string" && firstAssetId.length > 0
@@ -503,7 +575,7 @@ export default function ChatPage() {
 
       throw new Error(tChat("errors.pollTimeout"));
     },
-    [imagePrompt],
+    [imagePrompt, tChat],
   );
 
   const handleGenerateImage = useCallback(async () => {
@@ -556,7 +628,9 @@ export default function ChatPage() {
       }
 
       if (!res.ok) {
-        throw new Error(data?.error || tChat("errors.createImageTaskFailed"));
+        throw new Error(
+          data?.detail || data?.error || tChat("errors.createImageTaskFailed"),
+        );
       }
 
       const taskId = String(data?.taskId || "");
@@ -566,11 +640,13 @@ export default function ChatPage() {
       setImageStatus(String(data?.status || "queued"));
       await pollImageTask(taskId);
     } catch (err: unknown) {
-      setImageError(err instanceof Error ? err.message : tChat("errors.unknown"));
+      setImageError(
+        err instanceof Error ? err.message : tChat("errors.unknown"),
+      );
     } finally {
       setImageLoading(false);
     }
-  }, [imagePrompt, imageSize, imageStyle, pollImageTask]);
+  }, [imagePrompt, imageSize, imageStyle, pollImageTask, tChat]);
   const handleKey = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === "Enter" && !e.shiftKey) {
@@ -654,19 +730,105 @@ export default function ChatPage() {
       />
 
       {composerMode === "image" && (
-        <div className="px-4 pb-3 grid grid-cols-2 gap-3">
-          <input
-            value={imageSize}
-            onChange={(e) => setImageSize(e.target.value)}
-            className="rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none"
-            placeholder="1024x1024"
-          />
-          <input
-            value={imageStyle}
-            onChange={(e) => setImageStyle(e.target.value)}
-            className="rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none"
-            placeholder="photography"
-          />
+        <div className="px-4 pb-3 space-y-3">
+          <div className="rounded-xl border border-border bg-background/70 p-3">
+            <div className="mb-2 text-[11px] font-medium text-muted-foreground">
+              {tChat("imagePanel.ratio")}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {IMAGE_RATIO_OPTIONS.map((ratio) => (
+                <button
+                  key={ratio}
+                  type="button"
+                  onClick={() => setImageRatio(ratio)}
+                  className={`rounded-md border px-2.5 py-1 text-[11px] transition-colors ${
+                    imageRatio === ratio
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {ratio}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-border bg-background/70 p-3">
+            <div className="mb-2 text-[11px] font-medium text-muted-foreground">
+              {tChat("imagePanel.resolution")}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setImageQuality("2k")}
+                className={`rounded-lg border px-3 py-2 text-xs transition-colors ${
+                  imageQuality === "2k"
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {tChat("imagePanel.quality2k")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setImageQuality("4k")}
+                className={`rounded-lg border px-3 py-2 text-xs transition-colors ${
+                  imageQuality === "4k"
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {tChat("imagePanel.quality4k")}
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-[1fr_1fr_0.9fr] gap-2">
+            <div className="rounded-xl border border-border bg-background px-3 py-2">
+              <div className="text-[10px] text-muted-foreground">
+                {tChat("imagePanel.width")}
+              </div>
+              <input
+                type="number"
+                min={512}
+                step={64}
+                value={imageWidth}
+                onChange={(e) =>
+                  setImageWidth(snapTo64(Number(e.target.value) || 512))
+                }
+                className="w-full bg-transparent text-sm outline-none"
+              />
+            </div>
+            <div className="rounded-xl border border-border bg-background px-3 py-2">
+              <div className="text-[10px] text-muted-foreground">
+                {tChat("imagePanel.height")}
+              </div>
+              <input
+                type="number"
+                min={512}
+                step={64}
+                value={imageHeight}
+                onChange={(e) =>
+                  setImageHeight(snapTo64(Number(e.target.value) || 512))
+                }
+                className="w-full bg-transparent text-sm outline-none"
+              />
+            </div>
+            <div className="rounded-xl border border-border bg-background px-3 py-2">
+              <div className="text-[10px] text-muted-foreground">size</div>
+              <div className="text-sm font-medium">{imageSize}</div>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-border bg-background px-3 py-2">
+            <div className="mb-1 text-[10px] text-muted-foreground">style</div>
+            <input
+              value={imageStyle}
+              onChange={(e) => setImageStyle(e.target.value)}
+              className="w-full bg-transparent text-sm outline-none"
+              placeholder="photography"
+            />
+          </div>
         </div>
       )}
 
@@ -687,7 +849,8 @@ export default function ChatPage() {
               disabled={busy}
               className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors disabled:opacity-40"
             >
-              <ImageIcon size={13} /> <span>{tChat("composer.uploadImage")}</span>
+              <ImageIcon size={13} />{" "}
+              <span>{tChat("composer.uploadImage")}</span>
             </button>
 
             {/* model selector */}

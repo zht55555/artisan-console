@@ -45,9 +45,18 @@
       "useLastChat": "用上一轮对话出图",
       "enterEdit": "进入编辑"
     },
+    "imagePanel": {
+      "ratio": "选择比例",
+      "resolution": "选择分辨率",
+      "quality2k": "高清 2K",
+      "quality4k": "超清 4K",
+      "width": "W",
+      "height": "H"
+    },
     "message": {
       "canceled": "已中断",
       "retry": "重新发送",
+      "defaultImageContext": "当前图片",
       "generatedImage": "已为你生成图片：{prompt}",
       "generatedImageEmpty": "已为你生成图片",
       "optimizePrompt": "请基于{ctx}给出 3 个可执行的细节增强方案，并说明分别适合的使用场景。",
